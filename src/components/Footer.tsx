@@ -133,7 +133,7 @@ export const Footer: React.FC<FooterProps> = ({ onSelectTool }) => {
             <div className="flex items-center gap-2 text-xs sm:text-sm text-slate-500">
               <span>Made with</span>
               <Heart className="w-4 h-4 text-rose-500 fill-rose-500" />
-              <span>in Amsterdam</span>
+              <span>in India</span>
             </div>
           </div>
 
@@ -166,11 +166,11 @@ export const Footer: React.FC<FooterProps> = ({ onSelectTool }) => {
               Contact
             </h5>
             <a 
-              href="mailto:hi@editeverything.com?subject=Hello" 
+              href="mailto:raiprakhar0123@gmail.com?subject=Hello" 
               className="text-xs sm:text-sm text-cyan-400 hover:text-cyan-300 flex items-center gap-1.5 transition"
             >
               <Mail className="w-3.5 h-3.5" />
-              <span>hi@editeverything.com</span>
+              <span>raiprakhar0123@gmail.com</span>
             </a>
           </div>
 
