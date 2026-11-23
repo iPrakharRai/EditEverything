@@ -152,6 +152,16 @@ export const Navbar: React.FC<NavbarProps> = ({ onSelectTool, activeToolId, onGo
                 {t('nav.crop', 'Crop')}
               </button>
             </nav>
+
+            {/* Mobile All Tools Quick Button */}
+            <button
+              type="button"
+              onClick={() => setIsMegaMenuOpen(!isMegaMenuOpen)}
+              className="md:hidden flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-cyan-50/90 text-[#0891b2] border border-cyan-200 text-xs font-bold transition active:scale-95 cursor-pointer shadow-xs"
+            >
+              <span>{t('nav.allTools', 'All Tools')}</span>
+              <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isMegaMenuOpen ? 'rotate-180 text-cyan-600' : 'text-slate-500'}`} />
+            </button>
           </div>
 
           {/* Right: Pricing, Desktop, Log In, Language */}
@@ -208,7 +218,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onSelectTool, activeToolId, onGo
             </button>
 
             {/* 6-Column Layout matching official EditEverything */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-x-8 gap-y-8 text-base">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-x-4 sm:gap-x-8 gap-y-6 sm:gap-y-8 text-sm sm:text-base">
               
               {/* Column 1: RECENT */}
               <div>

@@ -1800,10 +1800,10 @@ export const PdfEditor: React.FC<PdfEditorProps> = ({ initialFile, onBack, onFil
       <div className="flex-1 bg-[#e8e8e8] pt-4 pb-24 flex flex-col items-center w-full">
         
         {/* SEGMENTED TOP TOOLBAR CONTAINER */}
-        <div className="w-full max-w-5xl px-4 flex items-center justify-between gap-3">
+        <div className="w-full max-w-5xl px-2 sm:px-4 flex items-center justify-between gap-2 overflow-x-auto custom-scrollbar no-scrollbar py-1">
           
           {/* Segmented Button Group */}
-          <div className="flex items-center border border-[#4ca4e8] rounded bg-white shadow-2xs divide-x divide-[#4ca4e8] overflow-visible">
+          <div className="flex items-center border border-[#4ca4e8] rounded bg-white shadow-2xs divide-x divide-[#4ca4e8] overflow-visible shrink-0">
             
             {/* 1. TEXT TOOL + DROPDOWN (MATCHING SCREENSHOT 1) */}
             <div className="relative toolbar-dropdown-container flex items-center h-full">
