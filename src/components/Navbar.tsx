@@ -157,7 +157,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onSelectTool, activeToolId, onGo
             <button
               type="button"
               onClick={() => setIsMegaMenuOpen(!isMegaMenuOpen)}
-              className="lg:hidden flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-cyan-50/90 text-[#0891b2] border border-cyan-200 text-xs font-bold transition active:scale-95 cursor-pointer shadow-xs shrink-0"
+              className="lg:hidden flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-cyan-50/90 text-cyan-800 border border-cyan-200 text-xs font-bold transition active:scale-95 cursor-pointer shadow-xs shrink-0"
             >
               <span>{t('nav.allTools', 'All Tools')}</span>
               <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isMegaMenuOpen ? 'rotate-180 text-cyan-600' : 'text-slate-500'}`} />

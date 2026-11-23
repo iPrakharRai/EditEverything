@@ -75,7 +75,10 @@ export const Footer: React.FC<FooterProps> = ({ onSelectTool }) => {
   ];
 
   return (
-    <footer className="bg-slate-900 text-slate-400 text-sm border-t border-slate-800 w-full select-none">
+    <footer className="bg-slate-900 text-slate-300 text-sm border-t border-slate-800 w-full select-none" aria-labelledby="footer-heading">
+      <h2 id="footer-heading" className="sr-only">
+        {t('footer.heading', 'Footer Navigation and Legal')}
+      </h2>
       
       {/* 1. Value Proposition Bar */}
       <div className="border-b border-slate-800 py-10 bg-slate-950/70 w-full">
@@ -87,8 +90,8 @@ export const Footer: React.FC<FooterProps> = ({ onSelectTool }) => {
                 <ShieldCheck className="w-6 h-6" />
               </div>
               <div>
-                <h4 className="text-white font-bold text-base">{t('footer.prop1Title', 'Files stay private')}</h4>
-                <p className="text-xs sm:text-sm text-slate-400">{t('footer.prop1Desc', 'Processed locally in your browser when possible')}</p>
+                <h3 className="text-white font-bold text-base">{t('footer.prop1Title', 'Files stay private')}</h3>
+                <p className="text-xs sm:text-sm text-slate-300">{t('footer.prop1Desc', 'Processed locally in your browser when possible')}</p>
               </div>
             </div>
 
@@ -97,8 +100,8 @@ export const Footer: React.FC<FooterProps> = ({ onSelectTool }) => {
                 <Clock className="w-6 h-6" />
               </div>
               <div>
-                <h4 className="text-white font-bold text-base">{t('footer.prop2Title', 'Instant Processing')}</h4>
-                <p className="text-xs sm:text-sm text-slate-400">{t('footer.prop2Desc', 'Blazing fast client-side PDF rendering & execution')}</p>
+                <h3 className="text-white font-bold text-base">{t('footer.prop2Title', 'Instant Processing')}</h3>
+                <p className="text-xs sm:text-sm text-slate-300">{t('footer.prop2Desc', 'Blazing fast client-side PDF rendering & execution')}</p>
               </div>
             </div>
 
@@ -107,8 +110,8 @@ export const Footer: React.FC<FooterProps> = ({ onSelectTool }) => {
                 <FileCheck className="w-6 h-6" />
               </div>
               <div>
-                <h4 className="text-white font-bold text-base">{t('footer.prop3Title', '100% Free to Use')}</h4>
-                <p className="text-xs sm:text-sm text-slate-400">{t('hero.freeService', 'Documents up to 200 pages or 50 MB and 3 tasks/hour')}</p>
+                <h3 className="text-white font-bold text-base">{t('footer.prop3Title', '100% Free to Use')}</h3>
+                <p className="text-xs sm:text-sm text-slate-300">{t('hero.freeService', 'Documents up to 200 pages or 50 MB and 3 tasks/hour')}</p>
               </div>
             </div>
 
@@ -130,10 +133,10 @@ export const Footer: React.FC<FooterProps> = ({ onSelectTool }) => {
                 Edit<span className="text-transparent bg-clip-text bg-gradient-to-r from-[#00b4d8] to-[#00bed6]">Everything</span>
               </span>
             </div>
-            <p className="text-xs sm:text-sm text-slate-400 leading-relaxed mb-6 max-w-sm">
+            <p className="text-xs sm:text-sm text-slate-300 leading-relaxed mb-6 max-w-sm">
               We help with your PDF & image tasks. Easy, pleasant, and productive PDF & image editor packed with 40+ tools for editing, converting, merging, splitting, signing, and organizing documents.
             </p>
-            <div className="flex items-center gap-2 text-xs sm:text-sm text-slate-500">
+            <div className="flex items-center gap-2 text-xs sm:text-sm text-slate-300">
               <span>Made with</span>
               <Heart className="w-4 h-4 text-rose-500 fill-rose-500" />
               <span>in India</span>
@@ -142,9 +145,9 @@ export const Footer: React.FC<FooterProps> = ({ onSelectTool }) => {
 
           {/* Resources */}
           <div>
-            <h5 className="text-white font-bold text-xs sm:text-sm uppercase tracking-wider mb-4">
+            <h3 className="text-white font-bold text-xs sm:text-sm uppercase tracking-wider mb-4">
               Resources
-            </h5>
+            </h3>
             <ul className="space-y-2.5 text-xs sm:text-sm">
               <li><a href="#pricing" onClick={(e) => { e.preventDefault(); alert('Free Web tier active.'); }} className="hover:text-cyan-400 transition">Pricing & Upgrade</a></li>
               <li><a href="#desktop" onClick={(e) => { e.preventDefault(); alert('EditEverything Desktop for Windows and Mac.'); }} className="hover:text-cyan-400 transition">EditEverything Desktop</a></li>
@@ -157,17 +160,17 @@ export const Footer: React.FC<FooterProps> = ({ onSelectTool }) => {
 
           {/* API & Legal */}
           <div>
-            <h5 className="text-white font-bold text-xs sm:text-sm uppercase tracking-wider mb-4">
+            <h3 className="text-white font-bold text-xs sm:text-sm uppercase tracking-wider mb-4">
               API
-            </h5>
+            </h3>
             <ul className="space-y-2.5 text-xs sm:text-sm mb-6">
               <li><a href="#api" onClick={(e) => { e.preventDefault(); alert('HTML to PDF API documentation.'); }} className="hover:text-cyan-400 transition">HTML to PDF API</a></li>
               <li><a href="#docs" onClick={(e) => { e.preventDefault(); alert('EditEverything Developer Documentation.'); }} className="hover:text-cyan-400 transition">Developer Docs</a></li>
             </ul>
 
-            <h5 className="text-white font-bold text-xs sm:text-sm uppercase tracking-wider mb-3">
+            <h3 className="text-white font-bold text-xs sm:text-sm uppercase tracking-wider mb-3">
               Contact
-            </h5>
+            </h3>
             <a 
               href="mailto:raiprakhar0123@gmail.com?subject=Hello" 
               className="text-xs sm:text-sm text-cyan-400 hover:text-cyan-300 flex items-center gap-1.5 transition"
@@ -179,9 +182,9 @@ export const Footer: React.FC<FooterProps> = ({ onSelectTool }) => {
 
           {/* Legal */}
           <div>
-            <h5 className="text-white font-bold text-xs sm:text-sm uppercase tracking-wider mb-4">
+            <h3 className="text-white font-bold text-xs sm:text-sm uppercase tracking-wider mb-4">
               Legal
-            </h5>
+            </h3>
             <ul className="space-y-2.5 text-xs sm:text-sm">
               <li><a href="#terms" onClick={(e) => { e.preventDefault(); alert('EditEverything Terms of Use.'); }} className="hover:text-cyan-400 transition">Terms of Use</a></li>
               <li><a href="#privacy" onClick={(e) => { e.preventDefault(); alert('Files stay secure and are deleted after processing.'); }} className="hover:text-cyan-400 transition">Privacy Policy</a></li>
@@ -196,16 +199,16 @@ export const Footer: React.FC<FooterProps> = ({ onSelectTool }) => {
 
         {/* 3. Comprehensive List of Tools (All 42+ EditEverything Tools) */}
         <div className="pt-8 border-t border-slate-800">
-          <h5 className="text-white font-bold text-xs sm:text-sm uppercase tracking-wider mb-4">
+          <h3 className="text-white font-bold text-xs sm:text-sm uppercase tracking-wider mb-4">
             {t('footer.tools', 'Tools')}
-          </h5>
+          </h3>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-x-4 gap-y-2 text-xs">
             {ALL_TOOLS.map((item, idx) => (
               <button
                 key={idx}
                 type="button"
                 onClick={() => onSelectTool(item.toolId)}
-                className="text-left text-slate-400 hover:text-cyan-400 transition cursor-pointer truncate py-1"
+                className="text-left text-slate-300 hover:text-cyan-400 transition cursor-pointer truncate py-1"
                 title={t('tool.' + item.toolId + '.name', item.name)}
               >
                 {t('tool.' + item.toolId + '.name', item.name)}
@@ -217,10 +220,10 @@ export const Footer: React.FC<FooterProps> = ({ onSelectTool }) => {
         {/* 4. Languages Grid */}
         <div className="pt-8 mt-8 border-t border-slate-800">
           <div className="flex items-center justify-between mb-4">
-            <h5 className="text-white font-bold text-xs sm:text-sm uppercase tracking-wider flex items-center gap-2">
+            <h3 className="text-white font-bold text-xs sm:text-sm uppercase tracking-wider flex items-center gap-2">
               <Globe className="w-4 h-4 text-cyan-400" />
               {t('footer.languages', 'Languages')}
-            </h5>
+            </h3>
             <button
               onClick={() => setShowAllLanguages(!showAllLanguages)}
               className="text-xs text-cyan-400 hover:underline flex items-center gap-1 cursor-pointer"
@@ -230,7 +233,7 @@ export const Footer: React.FC<FooterProps> = ({ onSelectTool }) => {
             </button>
           </div>
 
-          <div className={`grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2 text-xs text-slate-400 transition-all ${
+          <div className={`grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2 text-xs text-slate-300 transition-all ${
             showAllLanguages ? 'max-h-96' : 'max-h-16 overflow-hidden'
           }`}>
             {LANGUAGES.map((lang, idx) => (
@@ -238,7 +241,7 @@ export const Footer: React.FC<FooterProps> = ({ onSelectTool }) => {
                 key={idx}
                 onClick={() => setLanguage(lang)}
                 className={`text-left transition cursor-pointer py-1 truncate ${
-                  currentLang === lang ? 'text-cyan-400 font-bold underline' : 'hover:text-cyan-400 text-slate-400'
+                  currentLang === lang ? 'text-cyan-400 font-bold underline' : 'hover:text-cyan-400 text-slate-300'
                 }`}
               >
                 {lang}
@@ -248,7 +251,7 @@ export const Footer: React.FC<FooterProps> = ({ onSelectTool }) => {
         </div>
 
         {/* Bottom copyright notice */}
-        <div className="mt-12 pt-6 border-t border-slate-800/80 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
+        <div className="mt-12 pt-6 border-t border-slate-800/80 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-300">
           <p>{t('footer.copyright', '© EditEverything. All rights reserved. Thank you for your time.')}</p>
           <p>{t('footer.disclaimer', 'All trademarks and brands are property of their respective owners.')}</p>
         </div>

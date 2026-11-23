@@ -117,9 +117,9 @@ export const Hero: React.FC<HeroProps> = ({ onSelectTool, onLoadCustomFile }) =>
                 onClick={handleSampleImageClick}
                 className="px-3.5 py-2 rounded-xl bg-cyan-50 hover:bg-cyan-100 text-cyan-800 border-2 border-cyan-400 text-xs sm:text-sm font-bold flex items-center gap-2 transition active:scale-95 shadow-xs"
               >
-                <ScanText className="w-4 h-4 text-cyan-600" />
+                <ScanText className="w-4 h-4 text-cyan-700" />
                 <span>{t('hero.sampleOcr', 'Sample Image (OCR Edit)')}</span>
-                <span className="text-[10px] bg-cyan-600 text-white px-1.5 py-0.5 rounded-full font-black">NEW</span>
+                <span className="text-[10px] bg-cyan-800 text-white px-1.5 py-0.5 rounded-full font-black shadow-xs">NEW</span>
               </button>
 
               <button

@@ -91,7 +91,12 @@ export const ToolGrid: React.FC<ToolGridProps> = ({ onSelectTool }) => {
   });
 
   return (
-    <section className="py-12 sm:py-16 w-full max-w-7xl 2xl:max-w-[1700px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 overflow-hidden">
+    <section className="py-12 sm:py-16 w-full max-w-7xl 2xl:max-w-[1700px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 overflow-hidden" aria-labelledby="tools-heading">
+      {/* Accessible h2 heading establishing descending semantic hierarchy: h1 (Hero) -> h2 (Tools section) -> h3 (Tool cards) */}
+      <h2 id="tools-heading" className="sr-only">
+        {t('tools.allToolsHeading', 'All PDF & Image Tools')}
+      </h2>
+
       {/* Category Pills & Search */}
       <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 mb-8 sm:mb-10 max-w-full">
         
@@ -146,13 +151,13 @@ export const ToolGrid: React.FC<ToolGridProps> = ({ onSelectTool }) => {
                   </div>
 
                   {tool.badge && (
-                    <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-cyan-50 text-cyan-700 border border-cyan-200">
+                    <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-cyan-50 text-cyan-800 border border-cyan-200">
                       {tool.badge}
                     </span>
                   )}
                 </div>
 
-                <h3 className="text-base sm:text-lg font-bold text-slate-800 group-hover:text-cyan-600 transition mb-1.5">
+                <h3 className="text-base sm:text-lg font-bold text-slate-800 group-hover:text-cyan-700 transition mb-1.5">
                   {t(`tool.${tool.id}.name`, tool.name)}
                 </h3>
 
@@ -161,7 +166,7 @@ export const ToolGrid: React.FC<ToolGridProps> = ({ onSelectTool }) => {
                 </p>
               </div>
 
-              <div className="mt-5 pt-3.5 border-t border-slate-50 flex items-center justify-between text-xs sm:text-sm font-bold text-cyan-600 opacity-90 sm:opacity-0 group-hover:opacity-100 transition duration-200">
+              <div className="mt-5 pt-3.5 border-t border-slate-50 flex items-center justify-between text-xs sm:text-sm font-bold text-cyan-800 opacity-90 sm:opacity-0 group-hover:opacity-100 transition duration-200">
                 <span>{t('tools.launch', 'Launch tool')}</span>
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1.5 transition" />
               </div>
@@ -175,7 +180,7 @@ export const ToolGrid: React.FC<ToolGridProps> = ({ onSelectTool }) => {
           <p className="text-base text-slate-500 mb-2">{t('tools.noMatches', 'No tools found matching')} "{search}"</p>
           <button
             onClick={() => { setSearch(''); setActiveCategory('all'); }}
-            className="text-sm font-bold text-cyan-600 hover:underline cursor-pointer"
+            className="text-sm font-bold text-cyan-800 hover:underline cursor-pointer"
           >
             {t('tools.clearFilters', 'Clear filters & view all tools')}
           </button>

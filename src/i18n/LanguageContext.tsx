@@ -9,6 +9,41 @@ export const LANGUAGES = [
   'Svenska', 'ภาษาไทย', 'Tiếng Việt', 'Türkçe', 'Українська'
 ];
 
+/**
+ * Standard BCP 47 language tags for HTML [lang] attribute accessibility (WCAG 3.1.1)
+ */
+export const BCP47_LANG_CODES: Record<string, string> = {
+  'English': 'en',
+  'العربية': 'ar',
+  'Bahasa Indonesia': 'id',
+  'Deutsch': 'de',
+  'Dansk': 'da',
+  'Český': 'cs',
+  'Español': 'es',
+  'Ελληνικά': 'el',
+  'Français': 'fr',
+  'Italiano': 'it',
+  '日本語': 'ja',
+  '한국어': 'ko',
+  '简体中文': 'zh-CN',
+  '繁體中文': 'zh-TW',
+  'हिन्दी': 'hi',
+  'עברית': 'he',
+  'Magyar': 'hu',
+  'Nederlands': 'nl',
+  'Norsk': 'nb',
+  'Polski': 'pl',
+  'Português': 'pt',
+  'Română': 'ro',
+  'Русский': 'ru',
+  'Suomi': 'fi',
+  'Svenska': 'sv',
+  'ภาษาไทย': 'th',
+  'Tiếng Việt': 'vi',
+  'Türkçe': 'tr',
+  'Українська': 'uk'
+};
+
 interface LanguageContextType {
   currentLang: string;
   setLanguage: (lang: string) => void;
@@ -48,7 +83,7 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   useEffect(() => {
     if (typeof document !== 'undefined') {
       document.documentElement.dir = isRtl ? 'rtl' : 'ltr';
-      document.documentElement.lang = currentLang;
+      document.documentElement.lang = BCP47_LANG_CODES[currentLang] || 'en';
     }
   }, [currentLang, isRtl]);
 

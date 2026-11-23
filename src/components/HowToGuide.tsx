@@ -55,7 +55,7 @@ export const HowToGuide: React.FC<HowToGuideProps> = ({ onSelectTool }) => {
             </p>
             <button 
               onClick={() => onSelectTool('image-text-editor')}
-              className="text-xs font-bold text-[#0891b2] hover:text-[#008b9e] flex items-center gap-1 cursor-pointer"
+              className="text-xs font-bold text-cyan-800 hover:text-cyan-900 flex items-center gap-1 cursor-pointer"
             >
               <span>{t('guide.tryOcrBtn', 'Try Image Text Editor')}</span>
               <ArrowRight className="w-3.5 h-3.5" />
@@ -127,7 +127,7 @@ export const HowToGuide: React.FC<HowToGuideProps> = ({ onSelectTool }) => {
         {/* 2. Step-by-Step Signing Guide */}
         <div className="bg-slate-50 rounded-3xl border border-slate-200 p-8 sm:p-12 mb-16">
           <div className="max-w-3xl mb-8">
-            <span className="text-xs font-bold uppercase tracking-wider text-cyan-600 block mb-2">
+            <span className="text-xs font-bold uppercase tracking-wider text-cyan-800 block mb-2">
               {t('guide.signTag', 'SIGNATURE WORKFLOW')}
             </span>
             <h3 className="text-2xl sm:text-3xl font-extrabold text-slate-800">
