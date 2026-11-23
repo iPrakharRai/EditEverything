@@ -151,7 +151,7 @@ export const Hero: React.FC<HeroProps> = ({ onSelectTool, onLoadCustomFile }) =>
                 className="px-3.5 py-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 text-xs sm:text-sm font-semibold flex items-center gap-2 transition active:scale-95"
               >
                 <FileText className="w-4 h-4 text-amber-600" />
-                <span>Application Form</span>
+                <span>{t('hero.sampleForm', 'Application Form')}</span>
               </button>
             </div>
           </div>
@@ -161,12 +161,12 @@ export const Hero: React.FC<HeroProps> = ({ onSelectTool, onLoadCustomFile }) =>
         <div className="flex flex-col sm:flex-row items-center justify-center gap-2 text-xs sm:text-sm text-slate-500 font-medium">
           <div className="flex items-center gap-1.5">
             <Shield className="w-4 h-4 text-cyan-500" />
-            <span>Files stay private.</span>
+            <span>{t('hero.filesPrivate', 'Files stay private.')}</span>
           </div>
           <span className="hidden sm:inline">•</span>
-          <span>Processed locally in your browser when possible.</span>
+          <span>{t('hero.processedLocally', 'Processed locally in your browser when possible.')}</span>
           <span className="hidden sm:inline">•</span>
-          <span>Free service for documents up to 200 pages.</span>
+          <span>{t('hero.freeService', 'Free service for documents up to 200 pages.')}</span>
         </div>
 
       </div>

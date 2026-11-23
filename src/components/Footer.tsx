@@ -87,8 +87,8 @@ export const Footer: React.FC<FooterProps> = ({ onSelectTool }) => {
                 <ShieldCheck className="w-6 h-6" />
               </div>
               <div>
-                <h4 className="text-white font-bold text-base">Files stay private</h4>
-                <p className="text-xs sm:text-sm text-slate-400">Processed locally in your browser when possible</p>
+                <h4 className="text-white font-bold text-base">{t('footer.prop1Title', 'Files stay private')}</h4>
+                <p className="text-xs sm:text-sm text-slate-400">{t('footer.prop1Desc', 'Processed locally in your browser when possible')}</p>
               </div>
             </div>
 
@@ -97,8 +97,8 @@ export const Footer: React.FC<FooterProps> = ({ onSelectTool }) => {
                 <Clock className="w-6 h-6" />
               </div>
               <div>
-                <h4 className="text-white font-bold text-base">Instant Processing</h4>
-                <p className="text-xs sm:text-sm text-slate-400">Blazing fast client-side PDF rendering & execution</p>
+                <h4 className="text-white font-bold text-base">{t('footer.prop2Title', 'Instant Processing')}</h4>
+                <p className="text-xs sm:text-sm text-slate-400">{t('footer.prop2Desc', 'Blazing fast client-side PDF rendering & execution')}</p>
               </div>
             </div>
 
@@ -107,8 +107,8 @@ export const Footer: React.FC<FooterProps> = ({ onSelectTool }) => {
                 <FileCheck className="w-6 h-6" />
               </div>
               <div>
-                <h4 className="text-white font-bold text-base">Free service</h4>
-                <p className="text-xs sm:text-sm text-slate-400">Documents up to 200 pages or 50 MB and 3 tasks/hour</p>
+                <h4 className="text-white font-bold text-base">{t('footer.prop3Title', '100% Free to Use')}</h4>
+                <p className="text-xs sm:text-sm text-slate-400">{t('hero.freeService', 'Documents up to 200 pages or 50 MB and 3 tasks/hour')}</p>
               </div>
             </div>
 
@@ -197,18 +197,18 @@ export const Footer: React.FC<FooterProps> = ({ onSelectTool }) => {
         {/* 3. Comprehensive List of Tools (All 42+ EditEverything Tools) */}
         <div className="pt-8 border-t border-slate-800">
           <h5 className="text-white font-bold text-xs sm:text-sm uppercase tracking-wider mb-4">
-            Tools
+            {t('footer.tools', 'Tools')}
           </h5>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-x-4 gap-y-2 text-xs">
-            {ALL_TOOLS.map((t, idx) => (
+            {ALL_TOOLS.map((item, idx) => (
               <button
                 key={idx}
                 type="button"
-                onClick={() => onSelectTool(t.toolId)}
+                onClick={() => onSelectTool(item.toolId)}
                 className="text-left text-slate-400 hover:text-cyan-400 transition cursor-pointer truncate py-1"
-                title={t.name}
+                title={t('tool.' + item.toolId + '.name', item.name)}
               >
-                {t.name}
+                {t('tool.' + item.toolId + '.name', item.name)}
               </button>
             ))}
           </div>

@@ -79,8 +79,12 @@ export const ToolGrid: React.FC<ToolGridProps> = ({ onSelectTool }) => {
   const [search, setSearch] = useState('');
 
   const filteredTools = TOOLS.filter((tool) => {
+    const toolName = t(`tool.${tool.id}.name`, tool.name);
+    const toolDesc = t(`tool.${tool.id}.desc`, tool.description);
     const matchesCategory = activeCategory === 'all' || tool.category.includes(activeCategory);
     const matchesSearch =
+      toolName.toLowerCase().includes(search.toLowerCase()) ||
+      toolDesc.toLowerCase().includes(search.toLowerCase()) ||
       tool.name.toLowerCase().includes(search.toLowerCase()) ||
       tool.description.toLowerCase().includes(search.toLowerCase());
     return matchesCategory && matchesSearch;
@@ -149,16 +153,16 @@ export const ToolGrid: React.FC<ToolGridProps> = ({ onSelectTool }) => {
                 </div>
 
                 <h3 className="text-base sm:text-lg font-bold text-slate-800 group-hover:text-cyan-600 transition mb-1.5">
-                  {tool.name}
+                  {t(`tool.${tool.id}.name`, tool.name)}
                 </h3>
 
                 <p className="text-xs sm:text-sm text-slate-500 leading-relaxed">
-                  {tool.description}
+                  {t(`tool.${tool.id}.desc`, tool.description)}
                 </p>
               </div>
 
               <div className="mt-5 pt-3.5 border-t border-slate-50 flex items-center justify-between text-xs sm:text-sm font-bold text-cyan-600 opacity-90 sm:opacity-0 group-hover:opacity-100 transition duration-200">
-                <span>Launch tool</span>
+                <span>{t('tools.launch', 'Launch tool')}</span>
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1.5 transition" />
               </div>
             </button>
@@ -168,12 +172,12 @@ export const ToolGrid: React.FC<ToolGridProps> = ({ onSelectTool }) => {
 
       {filteredTools.length === 0 && (
         <div className="text-center py-16 bg-white rounded-2xl border border-slate-200">
-          <p className="text-base text-slate-500 mb-2">No tools found matching "{search}"</p>
+          <p className="text-base text-slate-500 mb-2">{t('tools.noMatches', 'No tools found matching')} "{search}"</p>
           <button
             onClick={() => { setSearch(''); setActiveCategory('all'); }}
-            className="text-sm font-bold text-cyan-600 hover:underline"
+            className="text-sm font-bold text-cyan-600 hover:underline cursor-pointer"
           >
-            Clear filters & view all tools
+            {t('tools.clearFilters', 'Clear filters & view all tools')}
           </button>
         </div>
       )}

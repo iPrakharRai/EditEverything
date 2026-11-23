@@ -210,19 +210,19 @@ export const InvertPdf: React.FC<InvertPdfProps> = ({ onBack, initialFile }) => 
             </div>
 
             <h2 className="text-4xl sm:text-5xl font-black text-slate-800 tracking-tight">
-              Invert & Clean Dark PDF
+              {t('invert.title', 'Invert & Clean Dark PDF')}
             </h2>
             <p className="text-base sm:text-xl text-slate-500 mt-2.5 font-medium max-w-2xl mx-auto">
-              If your PDF has a black or dark background, clean it into pure white paper with crisp black text for easy reading and ink-saving printing.
+              {t('invert.subtitle', 'If your PDF has a black or dark background, clean it into pure white paper with crisp black text for easy reading and ink-saving printing.')}
             </p>
           </div>
 
           <FileDropzone 
             onFileLoaded={(f) => setFile(f)}
             accept="application/pdf,image/*,.png,.jpg,.jpeg,.webp"
-            title="Upload Dark PDF or Image"
-            subtitle="Upload PDFs with dark background, black slides, or inverted scans. Files stay 100% private."
-            buttonText="Choose Dark PDF to Clean"
+            title={t('invert.title', 'Upload Dark PDF or Image')}
+            subtitle={t('invert.subtitle', 'Upload PDFs with dark background, black slides, or inverted scans. Files stay 100% private.')}
+            buttonText={t('invert.downloadBtn', 'Choose Dark PDF to Clean')}
           />
 
           {/* Quick Demo Sample Bar */}
@@ -232,7 +232,7 @@ export const InvertPdf: React.FC<InvertPdfProps> = ({ onBack, initialFile }) => 
               className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-white hover:bg-cyan-50 text-cyan-800 border-2 border-cyan-300 font-bold text-sm shadow-sm transition active:scale-95 cursor-pointer"
             >
               <Moon className="w-4 h-4 text-slate-700" />
-              <span>Test with Sample Dark Mode PDF (Black Background)</span>
+              <span>{t('invert.demoBtn', 'Test with Sample Dark Mode PDF (Black Background)')}</span>
               <span className="text-[10px] bg-cyan-600 text-white px-2 py-0.5 rounded-full font-black">DEMO</span>
             </button>
           </div>
@@ -253,11 +253,11 @@ export const InvertPdf: React.FC<InvertPdfProps> = ({ onBack, initialFile }) => 
               className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-slate-500 hover:text-slate-800 transition mb-2 cursor-pointer"
             >
               <ArrowLeft className="w-4 h-4" />
-              <span>Choose Another File</span>
+              <span>{t('editor.uploadAnother', 'Choose Another File')}</span>
             </button>
             <h1 className="text-2xl sm:text-3xl font-black text-slate-800 flex items-center gap-2.5">
               <Contrast className="w-7 h-7 text-cyan-600" />
-              <span>Clean Dark Background to White</span>
+              <span>{t('invert.title', 'Clean Dark Background to White')}</span>
             </h1>
             <p className="text-xs sm:text-sm text-slate-500 mt-1">
               File: <strong className="text-slate-700">{file.name}</strong> • {totalPages} page{totalPages > 1 ? 's' : ''} • {(file.bytes.byteLength / 1024).toFixed(1)} KB
@@ -280,7 +280,7 @@ export const InvertPdf: React.FC<InvertPdfProps> = ({ onBack, initialFile }) => 
               ) : (
                 <>
                   <Download className="w-5 h-5" />
-                  <span>Download Cleaned White PDF</span>
+                  <span>{t('invert.downloadBtn', 'Download Cleaned White PDF')}</span>
                 </>
               )}
             </button>
@@ -305,12 +305,12 @@ export const InvertPdf: React.FC<InvertPdfProps> = ({ onBack, initialFile }) => 
                 <div className="flex items-center justify-between mb-2">
                   <span className="font-bold text-sm sm:text-base text-slate-800 flex items-center gap-2">
                     <Sun className="w-4 h-4 text-cyan-600" />
-                    Smart Clean Background
+                    {t('invert.smartClean', 'Smart Clean Background')}
                   </span>
                   {mode === 'smart-clean' && <Check className="w-4 h-4 text-cyan-600" />}
                 </div>
                 <p className="text-xs text-slate-500 leading-relaxed">
-                  Cleans black background into white paper, inverts light text to dark, and preserves color diagrams.
+                  {t('invert.smartCleanDesc', 'Cleans black background into white paper, inverts light text to dark, and preserves color diagrams.')}
                 </p>
               </div>
               <span className="text-[10px] font-black text-cyan-800 bg-cyan-100 px-2 py-0.5 rounded-full w-fit mt-3">
@@ -332,12 +332,12 @@ export const InvertPdf: React.FC<InvertPdfProps> = ({ onBack, initialFile }) => 
                 <div className="flex items-center justify-between mb-2">
                   <span className="font-bold text-sm sm:text-base text-slate-800 flex items-center gap-2">
                     <Printer className="w-4 h-4 text-slate-700" />
-                    High-Contrast Laser Print
+                    {t('invert.monochrome', 'High-Contrast Laser Print')}
                   </span>
                   {mode === 'monochrome' && <Check className="w-4 h-4 text-cyan-600" />}
                 </div>
                 <p className="text-xs text-slate-500 leading-relaxed">
-                  Pure black text on pure white paper. Eliminates all gray toner haze to save maximum ink.
+                  {t('invert.monochromeDesc', 'Pure black text on pure white paper. Eliminates all gray toner haze to save maximum ink.')}
                 </p>
               </div>
               <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full w-fit mt-3">
@@ -359,12 +359,12 @@ export const InvertPdf: React.FC<InvertPdfProps> = ({ onBack, initialFile }) => 
                 <div className="flex items-center justify-between mb-2">
                   <span className="font-bold text-sm sm:text-base text-slate-800 flex items-center gap-2">
                     <Contrast className="w-4 h-4 text-slate-700" />
-                    Complete Negative Invert
+                    {t('invert.negative', 'Complete Negative Invert')}
                   </span>
                   {mode === 'full-invert' && <Check className="w-4 h-4 text-cyan-600" />}
                 </div>
                 <p className="text-xs text-slate-500 leading-relaxed">
-                  Exact mathematical negative color inversion (255 - RGB) across the entire canvas.
+                  {t('invert.negativeDesc', 'Exact mathematical negative color inversion (255 - RGB) across the entire canvas.')}
                 </p>
               </div>
               <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full w-fit mt-3">
@@ -378,7 +378,7 @@ export const InvertPdf: React.FC<InvertPdfProps> = ({ onBack, initialFile }) => 
           <div className="mt-6 pt-6 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-slate-700">
               <Sliders className="w-4 h-4 text-cyan-600" />
-              <span>Background Detection Threshold:</span>
+              <span>{t('invert.threshold', 'Background Detection Threshold:')}</span>
               <span className="font-mono font-bold text-cyan-700 bg-cyan-50 px-2 py-0.5 rounded-md border border-cyan-200">
                 {threshold} ({Math.round((threshold / 255) * 100)}%)
               </span>
@@ -404,7 +404,7 @@ export const InvertPdf: React.FC<InvertPdfProps> = ({ onBack, initialFile }) => 
           <div className="flex items-center justify-between">
             <h3 className="font-bold text-slate-800 text-base sm:text-lg flex items-center gap-2">
               <Eye className="w-5 h-5 text-cyan-600" />
-              <span>Live Before & After Preview (Page 1)</span>
+              <span>{t('invert.previewTitle', 'Live Before & After Preview (Page 1)')}</span>
               {isPreviewLoading && <RefreshCw className="w-4 h-4 text-cyan-600 animate-spin ml-2" />}
             </h3>
             <span className="text-xs text-slate-500 font-medium">
@@ -419,7 +419,7 @@ export const InvertPdf: React.FC<InvertPdfProps> = ({ onBack, initialFile }) => 
               <div className="flex items-center justify-between mb-3 pb-2 border-b border-slate-100">
                 <span className="text-xs font-bold uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
                   <span className="w-2.5 h-2.5 rounded-full bg-slate-800 inline-block"></span>
-                  Before: Original Dark PDF
+                  {t('invert.before', 'Before: Original Dark PDF')}
                 </span>
                 <span className="text-[11px] text-slate-400 font-mono">Page 1</span>
               </div>
@@ -445,10 +445,10 @@ export const InvertPdf: React.FC<InvertPdfProps> = ({ onBack, initialFile }) => 
               <div className="flex items-center justify-between mb-3 pb-2 border-b border-cyan-100">
                 <span className="text-xs font-bold uppercase tracking-wider text-cyan-800 flex items-center gap-1.5">
                   <span className="w-2.5 h-2.5 rounded-full bg-cyan-500 inline-block animate-pulse"></span>
-                  After: Cleaned White Background
+                  {t('invert.after', 'After: Cleaned White Background')}
                 </span>
                 <span className="text-[10px] font-black bg-cyan-100 text-cyan-800 px-2 py-0.5 rounded-full">
-                  READY TO PRINT
+                  {t('invert.readyBadge', 'READY TO PRINT')}
                 </span>
               </div>
 
@@ -476,7 +476,7 @@ export const InvertPdf: React.FC<InvertPdfProps> = ({ onBack, initialFile }) => 
           <div className="flex items-center gap-3">
             <FileCheck2 className="w-6 h-6 text-cyan-600 shrink-0" />
             <p className="text-xs sm:text-sm text-slate-600">
-              All {totalPages} page{totalPages > 1 ? 's' : ''} will be converted to crisp white backgrounds with high print clarity.
+              {t('invert.pagesNotice', `All ${totalPages} pages will be converted to crisp white backgrounds with high print clarity.`)}
             </p>
           </div>
 
@@ -486,7 +486,7 @@ export const InvertPdf: React.FC<InvertPdfProps> = ({ onBack, initialFile }) => 
             className="w-full sm:w-auto px-8 py-3.5 bg-gradient-to-r from-[#00bed6] to-[#0891b2] hover:from-[#00abc1] hover:to-[#0e7490] text-white font-bold text-sm sm:text-base rounded-xl shadow-md transition active:scale-95 cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
           >
             <Download className="w-4 h-4" />
-            <span>{isProcessing ? 'Processing...' : 'Download Cleaned PDF'}</span>
+            <span>{isProcessing ? 'Processing...' : t('invert.downloadBtn', 'Download Cleaned PDF')}</span>
           </button>
         </div>
 

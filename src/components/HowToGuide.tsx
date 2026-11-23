@@ -66,9 +66,9 @@ export const HowToGuide: React.FC<HowToGuideProps> = ({ onSelectTool }) => {
             <div className="w-12 h-12 rounded-xl bg-sky-100 text-sky-600 flex items-center justify-center mb-4 group-hover:scale-110 transition">
               <Type className="w-6 h-6" />
             </div>
-            <h3 className="text-lg font-bold text-slate-800 mb-2">Change Existing PDF Text</h3>
+            <h3 className="text-lg font-bold text-slate-800 mb-2">{t('guide.changeTextTitle', 'Change Existing PDF Text')}</h3>
             <p className="text-sm text-slate-600 leading-relaxed">
-              Select the 'Text' tool in the top toolbar. Click any existing text to start editing. Make text bold or italic, change font size, font family and text color.
+              {t('guide.changeTextDesc', "Select the 'Text' tool in the top toolbar. Click any existing text to start editing. Make text bold or italic, change font size, font family and text color.")}
             </p>
           </div>
 
@@ -76,9 +76,9 @@ export const HowToGuide: React.FC<HowToGuideProps> = ({ onSelectTool }) => {
             <div className="w-12 h-12 rounded-xl bg-cyan-100 text-cyan-600 flex items-center justify-center mb-4 group-hover:scale-110 transition">
               <FileSignature className="w-6 h-6" />
             </div>
-            <h3 className="text-lg font-bold text-slate-800 mb-2">Fill Out PDF Forms</h3>
+            <h3 className="text-lg font-bold text-slate-800 mb-2">{t('guide.fillFormsTitle', 'Fill Out PDF Forms')}</h3>
             <p className="text-sm text-slate-600 leading-relaxed">
-              Click any form field in the PDF and start typing. Form contains no input fields? Select 'Text' to type text and 'Forms' for checkmarks and radio bullets.
+              {t('guide.fillFormsDesc', "Click any form field in the PDF and start typing. Form contains no input fields? Select 'Text' to type text and 'Forms' for checkmarks and radio bullets.")}
             </p>
           </div>
 
@@ -86,9 +86,9 @@ export const HowToGuide: React.FC<HowToGuideProps> = ({ onSelectTool }) => {
             <div className="w-12 h-12 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center mb-4 group-hover:scale-110 transition">
               <ImageIcon className="w-6 h-6" />
             </div>
-            <h3 className="text-lg font-bold text-slate-800 mb-2">Add Image to PDF</h3>
+            <h3 className="text-lg font-bold text-slate-800 mb-2">{t('guide.addImageTitle', 'Add Image to PDF')}</h3>
             <p className="text-sm text-slate-600 leading-relaxed">
-              Click the 'Images' menu and select 'New Image'. Select an image from your computer and add it to the PDF page. Drag to move it, drag on corners to resize it.
+              {t('guide.addImageDesc', "Click the 'Images' menu and select 'New Image'. Select an image from your computer and add it to the PDF page. Drag to move it, drag on corners to resize it.")}
             </p>
           </div>
 
@@ -96,9 +96,9 @@ export const HowToGuide: React.FC<HowToGuideProps> = ({ onSelectTool }) => {
             <div className="w-12 h-12 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center mb-4 group-hover:scale-110 transition">
               <Link2 className="w-6 h-6" />
             </div>
-            <h3 className="text-lg font-bold text-slate-800 mb-2">Add & Edit Hyperlinks</h3>
+            <h3 className="text-lg font-bold text-slate-800 mb-2">{t('guide.linksTitle', 'Add & Edit Hyperlinks')}</h3>
             <p className="text-sm text-slate-600 leading-relaxed">
-              Add new links to web URLs or internal pages in the document. Easily click existing hyperlinks to modify destinations or styling.
+              {t('guide.linksDesc', 'Add new links to web URLs or internal pages in the document. Easily click existing hyperlinks to modify destinations or styling.')}
             </p>
           </div>
 
@@ -106,9 +106,9 @@ export const HowToGuide: React.FC<HowToGuideProps> = ({ onSelectTool }) => {
             <div className="w-12 h-12 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center mb-4 group-hover:scale-110 transition">
               <Square className="w-6 h-6" />
             </div>
-            <h3 className="text-lg font-bold text-slate-800 mb-2">Whiteout PDF</h3>
+            <h3 className="text-lg font-bold text-slate-800 mb-2">{t('guide.whiteoutTitle', 'Whiteout PDF')}</h3>
             <p className="text-sm text-slate-600 leading-relaxed">
-              Cover part of the PDF page with a white rectangle so sensitive contents or outdated paragraphs are no longer visible.
+              {t('guide.whiteoutDesc', 'Cover part of the PDF page with a white rectangle so sensitive contents or outdated paragraphs are no longer visible.')}
             </p>
           </div>
 
@@ -116,9 +116,9 @@ export const HowToGuide: React.FC<HowToGuideProps> = ({ onSelectTool }) => {
             <div className="w-12 h-12 rounded-xl bg-teal-100 text-teal-600 flex items-center justify-center mb-4 group-hover:scale-110 transition">
               <Search className="w-6 h-6" />
             </div>
-            <h3 className="text-lg font-bold text-slate-800 mb-2">Find and Replace</h3>
+            <h3 className="text-lg font-bold text-slate-800 mb-2">{t('guide.findReplaceTitle', 'Find and Replace')}</h3>
             <p className="text-sm text-slate-600 leading-relaxed">
-              Quickly find and replace words, names, and phrases across lines and pages with case matching and live match counters.
+              {t('guide.findReplaceDesc', 'Quickly find and replace words, names, and phrases across lines and pages with case matching and live match counters.')}
             </p>
           </div>
 
@@ -128,13 +128,13 @@ export const HowToGuide: React.FC<HowToGuideProps> = ({ onSelectTool }) => {
         <div className="bg-slate-50 rounded-3xl border border-slate-200 p-8 sm:p-12 mb-16">
           <div className="max-w-3xl mb-8">
             <span className="text-xs font-bold uppercase tracking-wider text-cyan-600 block mb-2">
-              SIGNATURE WORKFLOW
+              {t('guide.signTag', 'SIGNATURE WORKFLOW')}
             </span>
             <h3 className="text-2xl sm:text-3xl font-extrabold text-slate-800">
-              How To Sign PDF Documents
+              {t('guide.signTitle', 'How To Sign PDF Documents')}
             </h3>
             <p className="text-slate-600 mt-2 text-sm sm:text-base">
-              Create and place legally binding signatures in seconds with three flexible methods:
+              {t('guide.signSubtitle', 'Create and place legally binding signatures in seconds with three flexible methods:')}
             </p>
           </div>
 
@@ -143,9 +143,9 @@ export const HowToGuide: React.FC<HowToGuideProps> = ({ onSelectTool }) => {
               <div className="w-10 h-10 rounded-full bg-cyan-100 text-cyan-700 font-bold flex items-center justify-center mb-4">
                 1
               </div>
-              <h4 className="font-bold text-slate-800 mb-1">Type your signature</h4>
+              <h4 className="font-bold text-slate-800 mb-1">{t('guide.signStep1Title', 'Type your signature')}</h4>
               <p className="text-xs sm:text-sm text-slate-600">
-                Type your name and choose from curated cursive handwriting typography styles.
+                {t('guide.signStep1Desc', 'Type your name and choose from curated cursive handwriting typography styles.')}
               </p>
             </div>
 
@@ -153,9 +153,9 @@ export const HowToGuide: React.FC<HowToGuideProps> = ({ onSelectTool }) => {
               <div className="w-10 h-10 rounded-full bg-cyan-100 text-cyan-700 font-bold flex items-center justify-center mb-4">
                 2
               </div>
-              <h4 className="font-bold text-slate-800 mb-1">Draw your signature</h4>
+              <h4 className="font-bold text-slate-800 mb-1">{t('guide.signStep2Title', 'Draw your signature')}</h4>
               <p className="text-xs sm:text-sm text-slate-600">
-                Using your mouse, trackpad, or touchscreen, draw your exact handwritten signature on screen.
+                {t('guide.signStep2Desc', 'Using your mouse, trackpad, or touchscreen, draw your exact handwritten signature on screen.')}
               </p>
             </div>
 
@@ -163,9 +163,9 @@ export const HowToGuide: React.FC<HowToGuideProps> = ({ onSelectTool }) => {
               <div className="w-10 h-10 rounded-full bg-cyan-100 text-cyan-700 font-bold flex items-center justify-center mb-4">
                 3
               </div>
-              <h4 className="font-bold text-slate-800 mb-1">Upload an image</h4>
+              <h4 className="font-bold text-slate-800 mb-1">{t('guide.signStep3Title', 'Upload an image')}</h4>
               <p className="text-xs sm:text-sm text-slate-600">
-                Upload a PNG/JPG photo or scanned image of your physical signature to stamp on any page.
+                {t('guide.signStep3Desc', 'Upload a PNG/JPG photo or scanned image of your physical signature to stamp on any page.')}
               </p>
             </div>
           </div>
@@ -175,7 +175,7 @@ export const HowToGuide: React.FC<HowToGuideProps> = ({ onSelectTool }) => {
               onClick={() => onSelectTool('edit')}
               className="px-6 py-3 bg-gradient-to-r from-[#00bed6] to-[#0891b2] hover:from-[#00abc1] hover:to-[#0e7490] text-white font-bold rounded-xl shadow-md transition active:scale-95 inline-flex items-center gap-2 cursor-pointer text-sm"
             >
-              <span>Ready to edit your PDF online?</span>
+              <span>{t('guide.readyCta', 'Ready to edit your PDF online?')}</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>
@@ -185,17 +185,17 @@ export const HowToGuide: React.FC<HowToGuideProps> = ({ onSelectTool }) => {
         <div className="border border-slate-200 rounded-3xl p-8 sm:p-10 flex flex-col md:flex-row items-center justify-between gap-6 bg-gradient-to-r from-sky-50 via-white to-cyan-50">
           <div>
             <h3 className="text-xl sm:text-2xl font-bold text-slate-800 mb-2">
-              How to edit PDF on Mac & Windows
+              {t('guide.desktopTitle', 'How to edit PDF on Mac & Windows')}
             </h3>
             <p className="text-sm text-slate-600 max-w-xl">
-              Edit in your browser with Safari, Chrome, Edge, or Firefox. Same features, lightning-fast rendering, and your files stay private in your local browser session.
+              {t('guide.desktopSubtitle', 'Edit in your browser with Safari, Chrome, Edge, or Firefox. Same features, lightning-fast rendering, and your files stay private in your local browser session.')}
             </p>
           </div>
           <button
             onClick={() => onSelectTool('edit')}
             className="px-6 py-3 border border-sky-400 text-sky-700 hover:bg-sky-50 bg-white rounded-xl font-bold text-sm shadow-xs transition shrink-0 cursor-pointer"
           >
-            Launch Online Editor
+            {t('guide.launchEditor', 'Launch Online Editor')}
           </button>
         </div>
 
