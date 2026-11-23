@@ -1,3 +1,4 @@
+import { useLanguage } from '../i18n/LanguageContext';
 import { generateSampleImage } from '../utils/sampleImages';
 import React, { useRef, useState } from 'react';
 import { Upload, FileText, Sparkles, Image as ImageIcon, ScanText } from 'lucide-react';
@@ -24,6 +25,7 @@ export const FileDropzone: React.FC<FileDropzoneProps> = ({
   buttonText,
   isImageMode = false,
 }) => {
+  const { t } = useLanguage();
   const inputRef = useRef<HTMLInputElement>(null);
   const [isDragOver, setIsDragOver] = useState(false);
 
@@ -96,7 +98,15 @@ export const FileDropzone: React.FC<FileDropzoneProps> = ({
     onFileLoaded({ name: names[type], bytes: arr });
   };
 
-  const resolvedButtonText = buttonText || (isImageMode ? 'Choose Image or Document' : 'Choose Files');
+  const displayTitle = (title && title !== 'Upload PDF or Image files') 
+    ? title 
+    : (isImageMode ? t('dropzone.titleImage', 'Upload Image or Scanned Document') : t('dropzone.titlePdf', 'Upload PDF or Image files'));
+
+  const displaySubtitle = (subtitle && subtitle !== 'Files stay private. Automatically processed 100% locally in your browser.')
+    ? subtitle
+    : (isImageMode ? t('dropzone.subImage', 'Upload PNG, JPG, JPEG, WebP, BMP or scanned PDF. Files stay 100% private in your browser.') : t('dropzone.subPdf', 'Files stay private. Automatically processed 100% locally in your browser.'));
+
+  const resolvedButtonText = buttonText || (isImageMode ? t('dropzone.chooseImage', 'Choose Image or Document') : t('dropzone.chooseFiles', 'Choose Files'));
 
   return (
     <div
@@ -129,10 +139,10 @@ export const FileDropzone: React.FC<FileDropzoneProps> = ({
       </div>
 
       <h3 className="text-3xl sm:text-4xl font-black text-slate-800 mb-3">
-        {title}
+        {displayTitle}
       </h3>
       <p className="text-base sm:text-lg text-slate-500 mb-8 max-w-xl mx-auto font-medium">
-        {subtitle}
+        {displaySubtitle}
       </p>
 
       <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-8">
@@ -148,7 +158,7 @@ export const FileDropzone: React.FC<FileDropzoneProps> = ({
 
       <div className="pt-6 border-t border-slate-100">
         <span className="text-xs sm:text-sm font-bold text-slate-400 uppercase tracking-widest block mb-4">
-          Or test instantly with a demo file:
+          {t('dropzone.demoTitle', 'Or test instantly with a demo file:')}
         </span>
         <div className="flex flex-wrap items-center justify-center gap-2.5">
           {/* Sample Images for OCR */}
@@ -158,7 +168,7 @@ export const FileDropzone: React.FC<FileDropzoneProps> = ({
             className="px-4 py-2.5 bg-cyan-50 hover:bg-cyan-100 text-cyan-800 border-2 border-cyan-400 rounded-xl text-sm sm:text-base font-bold transition cursor-pointer flex items-center gap-2 shadow-xs"
           >
             <Sparkles className="w-4 h-4 text-cyan-600" />
-            <span>Sample Certificate (OCR)</span>
+            <span>{t('dropzone.sampleCert', 'Sample Certificate (OCR)')}</span>
             <span className="text-[10px] bg-cyan-600 text-white px-1.5 py-0.5 rounded-full font-black">NEW</span>
           </button>
 
@@ -167,7 +177,7 @@ export const FileDropzone: React.FC<FileDropzoneProps> = ({
             onClick={() => loadSampleImage('receipt')}
             className="px-4 py-2.5 bg-cyan-50/70 hover:bg-cyan-100 text-cyan-800 border border-cyan-300 rounded-xl text-sm sm:text-base font-semibold transition cursor-pointer flex items-center gap-1.5 shadow-xs"
           >
-            <span>Receipt Image (OCR)</span>
+            <span>{t('dropzone.sampleReceipt', 'Receipt Image (OCR)')}</span>
           </button>
 
           <button
@@ -175,7 +185,7 @@ export const FileDropzone: React.FC<FileDropzoneProps> = ({
             onClick={() => loadSampleImage('quote')}
             className="px-4 py-2.5 bg-cyan-50/70 hover:bg-cyan-100 text-cyan-800 border border-cyan-300 rounded-xl text-sm sm:text-base font-semibold transition cursor-pointer flex items-center gap-1.5 shadow-xs"
           >
-            <span>Quote Poster (OCR)</span>
+            <span>{t('dropzone.sampleQuote', 'Quote Poster (OCR)')}</span>
           </button>
 
           {/* Sample PDFs */}
@@ -184,14 +194,14 @@ export const FileDropzone: React.FC<FileDropzoneProps> = ({
             onClick={() => loadSample('contract')}
             className="px-4 py-2.5 bg-slate-50 hover:bg-cyan-50 hover:text-cyan-800 hover:border-cyan-300 border border-slate-200 rounded-xl text-sm sm:text-base font-semibold text-slate-700 transition cursor-pointer"
           >
-            NDA Agreement (PDF)
+            {t('hero.sampleNda', 'NDA Agreement (PDF)')}
           </button>
           <button
             type="button"
             onClick={() => loadSample('invoice')}
             className="px-4 py-2.5 bg-slate-50 hover:bg-cyan-50 hover:text-cyan-800 hover:border-cyan-300 border border-slate-200 rounded-xl text-sm sm:text-base font-semibold text-slate-700 transition cursor-pointer"
           >
-            Invoice (PDF)
+            {t('hero.sampleInvoice', 'Invoice (PDF)')}
           </button>
         </div>
       </div>

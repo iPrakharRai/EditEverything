@@ -1,3 +1,4 @@
+import { useLanguage } from '../i18n/LanguageContext';
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { 
@@ -45,7 +46,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onSelectTool, activeToolId, onGo
   const [showDesktopModal, setShowDesktopModal] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showLangModal, setShowLangModal] = useState(false);
-  const [selectedLang, setSelectedLang] = useState('English');
+  const { currentLang, setLanguage, t } = useLanguage();
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -105,7 +106,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onSelectTool, activeToolId, onGo
                     : 'hover:bg-slate-100/70 hover:text-slate-900'
                 }`}
               >
-                <span>All Tools</span>
+                <span>{t('nav.allTools', 'All Tools')}</span>
                 <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isMegaMenuOpen ? 'rotate-180 text-[#00bed6]' : 'text-slate-500'}`} />
               </button>
 
@@ -113,42 +114,42 @@ export const Navbar: React.FC<NavbarProps> = ({ onSelectTool, activeToolId, onGo
                 onClick={() => handleToolClick('compress')} 
                 className="px-3 py-2 hover:text-slate-900 hover:bg-slate-100/70 rounded-lg transition cursor-pointer"
               >
-                Compress
+                {t('nav.compress', 'Compress')}
               </button>
 
               <button 
                 onClick={() => handleToolClick('edit')} 
                 className="px-3 py-2 hover:text-slate-900 hover:bg-slate-100/70 rounded-lg transition cursor-pointer"
               >
-                Edit
+                {t('nav.edit', 'Edit')}
               </button>
 
               <button 
                 onClick={() => handleToolClick('fill-sign')} 
                 className="px-3 py-2 hover:text-slate-900 hover:bg-slate-100/70 rounded-lg transition cursor-pointer"
               >
-                Fill & Sign
+                {t('nav.fillSign', 'Fill & Sign')}
               </button>
 
               <button 
                 onClick={() => handleToolClick('merge')} 
                 className="px-3 py-2 hover:text-slate-900 hover:bg-slate-100/70 rounded-lg transition cursor-pointer"
               >
-                Merge
+                {t('nav.merge', 'Merge')}
               </button>
 
               <button 
                 onClick={() => handleToolClick('delete-pages')} 
                 className="px-3 py-2 hover:text-slate-900 hover:bg-slate-100/70 rounded-lg transition cursor-pointer"
               >
-                Delete Pages
+                {t('nav.deletePages', 'Delete Pages')}
               </button>
 
               <button 
                 onClick={() => handleToolClick('crop')} 
                 className="px-3 py-2 hover:text-slate-900 hover:bg-slate-100/70 rounded-lg transition cursor-pointer"
               >
-                Crop
+                {t('nav.crop', 'Crop')}
               </button>
             </nav>
           </div>
@@ -159,21 +160,21 @@ export const Navbar: React.FC<NavbarProps> = ({ onSelectTool, activeToolId, onGo
               onClick={() => setShowPricingModal(true)} 
               className="hover:text-slate-900 transition cursor-pointer hidden sm:block"
             >
-              Pricing
+              {t('nav.pricing', 'Pricing')}
             </button>
             
             <button 
               onClick={() => setShowDesktopModal(true)} 
               className="hover:text-slate-900 transition cursor-pointer hidden sm:block"
             >
-              Desktop
+              {t('nav.desktop', 'Desktop')}
             </button>
 
             <button 
               onClick={() => setShowLoginModal(true)} 
               className="hover:text-slate-900 transition cursor-pointer"
             >
-              Log in
+              {t('nav.login', 'Log in')}
             </button>
 
             <button 
@@ -644,7 +645,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onSelectTool, activeToolId, onGo
                   onClick={() => setShowPricingModal(false)} 
                   className="w-full py-2.5 bg-gradient-to-r from-[#00bed6] to-[#0891b2] text-white font-bold text-xs sm:text-sm rounded-xl transition shadow-md shadow-cyan-500/20 active:scale-95 cursor-pointer"
                 >
-                  Current Plan
+                  {t('nav.currentPlan', 'Current Plan')}
                 </button>
               </div>
 
@@ -658,7 +659,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onSelectTool, activeToolId, onGo
                   onClick={() => { alert('Pro subscription activated!'); setShowPricingModal(false); }} 
                   className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs sm:text-sm rounded-xl transition shadow-md active:scale-95 cursor-pointer"
                 >
-                  Upgrade
+                  {t('nav.upgrade', 'Upgrade')}
                 </button>
               </div>
             </div>
@@ -685,20 +686,20 @@ export const Navbar: React.FC<NavbarProps> = ({ onSelectTool, activeToolId, onGo
             </div>
             <h3 className="text-2xl font-black text-slate-800 mb-2">EditEverything Desktop</h3>
             <p className="text-sm text-slate-600 mb-6 leading-relaxed">
-              Same features as the online service, and the files never leave your computer. Use all your locally installed fonts.
+              {t('nav.desktopDesc', 'Same features as the online service, and the files never leave your computer. Use all your locally installed fonts.')}
             </p>
             <div className="space-y-3">
               <button 
                 onClick={() => { alert('Downloading EditEverything Desktop for Windows (64-bit)...'); setShowDesktopModal(false); }} 
                 className="w-full py-3.5 bg-gradient-to-r from-[#00bed6] to-[#0891b2] hover:from-[#00abc1] hover:to-[#0e7490] text-white font-bold text-sm sm:text-base rounded-xl transition shadow-md shadow-cyan-500/25 active:scale-95 cursor-pointer"
               >
-                Download for Windows (64-bit)
+                {t('nav.downloadWin', 'Download for Windows (64-bit)')}
               </button>
               <button 
                 onClick={() => { alert('Downloading EditEverything Desktop for macOS (Apple Silicon & Intel)...'); setShowDesktopModal(false); }} 
                 className="w-full py-3 bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold text-xs sm:text-sm rounded-xl transition active:scale-95 cursor-pointer"
               >
-                Download for macOS (Apple Silicon & Intel)
+                {t('nav.downloadMac', 'Download for macOS (Apple Silicon & Intel)')}
               </button>
             </div>
           </div>
@@ -727,7 +728,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onSelectTool, activeToolId, onGo
               onClick={() => { alert('Logged in successfully!'); setShowLoginModal(false); }} 
               className="w-full py-3 bg-gradient-to-r from-[#00bed6] to-[#0891b2] hover:from-[#00abc1] hover:to-[#0e7490] text-white font-bold text-sm rounded-xl transition shadow-md shadow-cyan-500/25 active:scale-95 cursor-pointer"
             >
-              Log in
+              {t('nav.login', 'Log in')}
             </button>
           </div>
         </div>,
@@ -744,7 +745,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onSelectTool, activeToolId, onGo
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
               <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
                 <Globe className="w-5 h-5 text-cyan-600" />
-                Select Language
+                {t('nav.selectLanguage', 'Select Language')}
               </h3>
               <button 
                 onClick={() => setShowLangModal(false)} 
@@ -758,15 +759,15 @@ export const Navbar: React.FC<NavbarProps> = ({ onSelectTool, activeToolId, onGo
                 <button
                   key={lang}
                   onClick={() => {
-                    setSelectedLang(lang);
+                    setLanguage(lang);
                     setShowLangModal(false);
                   }}
                   className={`text-left px-3 py-2 rounded-xl text-xs sm:text-sm font-medium transition cursor-pointer flex items-center justify-between ${
-                    selectedLang === lang ? 'bg-cyan-50 text-cyan-700 font-bold' : 'hover:bg-slate-50 text-slate-700'
+                    currentLang === lang ? 'bg-cyan-50 text-cyan-700 font-bold' : 'hover:bg-slate-50 text-slate-700'
                   }`}
                 >
                   <span>{lang}</span>
-                  {selectedLang === lang && <Check className="w-4 h-4 text-cyan-600" />}
+                  {currentLang === lang && <Check className="w-4 h-4 text-cyan-600" />}
                 </button>
               ))}
             </div>

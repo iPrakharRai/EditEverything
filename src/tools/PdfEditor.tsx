@@ -1,3 +1,4 @@
+import { useLanguage } from '../i18n/LanguageContext';
 import { WaterBackground } from '../components/WaterBackground';
 import React, { useState, useRef, useEffect } from 'react';
 import { 
@@ -394,6 +395,7 @@ const FloatingTextToolbar: React.FC<FloatingTextToolbarProps> = ({
 };
 
 export const PdfEditor: React.FC<PdfEditorProps> = ({ initialFile, onBack, onFileLoadedStateChange, isImageEditorMode = false }) => {
+  const { t } = useLanguage();
   const [file, setFile] = useState<{ name: string; bytes: Uint8Array } | null>(initialFile || null);
 
   useEffect(() => {
@@ -1784,13 +1786,13 @@ export const PdfEditor: React.FC<PdfEditorProps> = ({ initialFile, onBack, onFil
       {/* 1. TOP TITLE HEADER (EXACT MATCHING EDITEVERYTHING SCREENSHOT 1) */}
       <div className="bg-white text-center pt-6 pb-6 px-4">
         <h1 className="text-3xl sm:text-4xl font-black text-[#333333] tracking-tight inline-flex items-start justify-center gap-2">
-          <span>{isImageEditorMode || isOriginalImageFile ? 'Online Image & PDF editor' : 'Online PDF editor'}</span>
+          <span>{isImageEditorMode || isOriginalImageFile ? t('editor.onlineImageEditor', 'Online Image & PDF editor') : t('editor.onlinePdfEditor', 'Online PDF editor')}</span>
           <span className="text-xs sm:text-sm font-black text-slate-500 tracking-wider uppercase select-none -translate-y-1">
             BETA
           </span>
         </h1>
         <p className="text-base sm:text-lg text-[#7f8c8d] mt-1.5 font-medium">
-          Edit text directly in PDFs and images with AI OCR. Fill & sign documents
+          {t('editor.subtitle', 'Edit text directly in PDFs and images with AI OCR. Fill & sign documents')}
         </p>
       </div>
 
@@ -2725,7 +2727,7 @@ export const PdfEditor: React.FC<PdfEditorProps> = ({ initialFile, onBack, onFil
             title="Scan and detect text on this page with AI OCR"
           >
             <ScanText className={`w-3.5 h-3.5 text-[#00bed6] ${isOcrScanning ? 'animate-spin' : ''}`} />
-            <span>{isOcrScanning ? 'Scanning OCR...' : 'OCR Scan Text'}</span>
+            <span>{isOcrScanning ? t('editor.ocrScanning', 'Scanning OCR...') : t('editor.ocrScan', 'OCR Scan Text')}</span>
           </button>
         </div>
 
@@ -3490,7 +3492,7 @@ export const PdfEditor: React.FC<PdfEditorProps> = ({ initialFile, onBack, onFil
           disabled={isProcessing}
           className="px-7 py-2.5 bg-gradient-to-r from-[#00bed6] to-[#0891b2] hover:from-[#00abc1] hover:to-[#0e7490] shadow-cyan-500/25 active:scale-95 text-white font-bold text-sm sm:text-base rounded-full shadow-xl flex items-center gap-2 transition-transform hover:scale-105 cursor-pointer disabled:opacity-50"
         >
-          <span>{isProcessing ? 'Saving document...' : 'Apply changes'}</span>
+          <span>{isProcessing ? t('editor.saving', 'Saving document...') : t('editor.applyChanges', 'Apply changes')}</span>
           <ChevronRight className="w-4.5 h-4.5 stroke-[3]" />
         </button>
       </div>

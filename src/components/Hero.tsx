@@ -1,3 +1,4 @@
+import { useLanguage } from '../i18n/LanguageContext';
 import { generateSampleImage } from '../utils/sampleImages';
 import { WaterBackground } from './WaterBackground';
 import React, { useRef } from 'react';
@@ -20,6 +21,7 @@ interface HeroProps {
 }
 
 export const Hero: React.FC<HeroProps> = ({ onSelectTool, onLoadCustomFile }) => {
+  const { t } = useLanguage();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -61,20 +63,20 @@ export const Hero: React.FC<HeroProps> = ({ onSelectTool, onLoadCustomFile }) =>
         {/* Badge */}
         <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-cyan-50 border border-cyan-200 text-cyan-800 text-xs sm:text-sm font-semibold mb-6 shadow-xs">
           <span className="w-2.5 h-2.5 rounded-full bg-cyan-500 animate-ping"></span>
-          <span>EditEverything PDF & Image Suite — 100% Free & Fast</span>
+          <span>{t('hero.badge', 'EditEverything PDF & Image Suite — 100% Free & Fast')}</span>
         </div>
 
         {/* Heading */}
         <h1 className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-black text-slate-800 tracking-tight leading-[1.12] mb-5">
-          Easy, pleasant and productive <br className="hidden sm:inline" />
+          {t('hero.title1', 'Easy, pleasant and productive')} <br className="hidden sm:inline" />
           <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#00bed6] via-[#0891b2] to-[#0e3b43]">
-            PDF & Image editor & tools
+            {t('hero.title2', 'PDF & Image editor & tools')}
           </span>
         </h1>
 
         {/* Subtitle */}
         <p className="text-base sm:text-lg md:text-xl text-slate-600 max-w-3xl mx-auto mb-8 sm:mb-10 font-normal leading-relaxed">
-          We help with your PDF and image tasks. Edit existing text directly in PDFs and images with AI OCR, fill and sign documents, merge, split, compress, and convert files with complete privacy.
+          {t('hero.subtitle', 'We help with your PDF and image tasks. Edit existing text directly in PDFs and images with AI OCR, fill and sign documents, merge, split, compress, and convert files with complete privacy.')}
         </p>
 
         {/* Big Upload CTA Box */}
@@ -93,14 +95,14 @@ export const Hero: React.FC<HeroProps> = ({ onSelectTool, onLoadCustomFile }) =>
               className="w-full sm:w-auto px-8 py-4 sm:py-4.5 text-base sm:text-lg font-bold text-white bg-gradient-to-r from-[#00bed6] to-[#0891b2] hover:from-[#00abc1] hover:to-[#0e7490] active:scale-[0.98] rounded-xl sm:rounded-2xl shadow-lg shadow-cyan-500/25 flex items-center justify-center gap-3 transition cursor-pointer"
             >
               <Upload className="w-5 h-5 sm:w-6 sm:h-6" />
-              <span>Upload PDF or Image</span>
+              <span>{t('hero.uploadBtn', 'Upload PDF or Image')}</span>
             </button>
 
             <button
               onClick={() => onSelectTool('edit')}
               className="w-full sm:w-auto px-6 py-4 sm:py-4.5 text-sm sm:text-base font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 active:scale-[0.98] rounded-xl sm:rounded-2xl transition flex items-center justify-center gap-2 cursor-pointer"
             >
-              <span>Explore All Tools</span>
+              <span>{t('hero.exploreBtn', 'Explore All Tools')}</span>
               <ChevronDown className="w-4 h-4 sm:w-5 sm:h-5 text-slate-500" />
             </button>
           </div>
@@ -108,7 +110,7 @@ export const Hero: React.FC<HeroProps> = ({ onSelectTool, onLoadCustomFile }) =>
           {/* Instant Sample PDF Buttons */}
           <div className="mt-6 pt-5 border-t border-slate-100">
             <div className="text-xs sm:text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3">
-              Or test immediately with a ready-made sample:
+              {t('hero.demoHeader', 'Or test immediately with a ready-made sample:')}
             </div>
             <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-2.5">
               <button
@@ -116,7 +118,7 @@ export const Hero: React.FC<HeroProps> = ({ onSelectTool, onLoadCustomFile }) =>
                 className="px-3.5 py-2 rounded-xl bg-cyan-50 hover:bg-cyan-100 text-cyan-800 border-2 border-cyan-400 text-xs sm:text-sm font-bold flex items-center gap-2 transition active:scale-95 shadow-xs"
               >
                 <ScanText className="w-4 h-4 text-cyan-600" />
-                <span>Sample Image (OCR Edit)</span>
+                <span>{t('hero.sampleOcr', 'Sample Image (OCR Edit)')}</span>
                 <span className="text-[10px] bg-cyan-600 text-white px-1.5 py-0.5 rounded-full font-black">NEW</span>
               </button>
 
@@ -125,7 +127,7 @@ export const Hero: React.FC<HeroProps> = ({ onSelectTool, onLoadCustomFile }) =>
                 className="px-3.5 py-2 rounded-xl bg-cyan-50 hover:bg-cyan-100 text-cyan-800 border border-cyan-200 text-xs sm:text-sm font-semibold flex items-center gap-2 transition active:scale-95"
               >
                 <FileSignature className="w-4 h-4 text-cyan-600" />
-                <span>NDA Contract (2 Pages)</span>
+                <span>{t('hero.sampleNda', 'NDA Contract (2 Pages)')}</span>
               </button>
 
               <button
@@ -133,7 +135,7 @@ export const Hero: React.FC<HeroProps> = ({ onSelectTool, onLoadCustomFile }) =>
                 className="px-3.5 py-2 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 text-xs sm:text-sm font-semibold flex items-center gap-2 transition active:scale-95"
               >
                 <FileCheck2 className="w-4 h-4 text-blue-600" />
-                <span>Commercial Invoice</span>
+                <span>{t('hero.sampleInvoice', 'Commercial Invoice')}</span>
               </button>
 
               <button
@@ -141,7 +143,7 @@ export const Hero: React.FC<HeroProps> = ({ onSelectTool, onLoadCustomFile }) =>
                 className="px-3.5 py-2 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-800 border border-purple-200 text-xs sm:text-sm font-semibold flex items-center gap-2 transition active:scale-95"
               >
                 <Layers className="w-4 h-4 text-purple-600" />
-                <span>Executive Report (3 Pages)</span>
+                <span>{t('hero.sampleReport', 'Executive Report (3 Pages)')}</span>
               </button>
 
               <button

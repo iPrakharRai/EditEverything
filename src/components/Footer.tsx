@@ -1,3 +1,4 @@
+import { useLanguage } from '../i18n/LanguageContext';
 import React, { useState } from 'react';
 import { 
   ShieldCheck, 
@@ -15,6 +16,7 @@ interface FooterProps {
 }
 
 export const Footer: React.FC<FooterProps> = ({ onSelectTool }) => {
+  const { currentLang, setLanguage, t } = useLanguage();
   const [showAllLanguages, setShowAllLanguages] = useState(false);
 
   const ALL_TOOLS = [
@@ -216,13 +218,13 @@ export const Footer: React.FC<FooterProps> = ({ onSelectTool }) => {
           <div className="flex items-center justify-between mb-4">
             <h5 className="text-white font-bold text-xs sm:text-sm uppercase tracking-wider flex items-center gap-2">
               <Globe className="w-4 h-4 text-cyan-400" />
-              Languages
+              {t('footer.languages', 'Languages')}
             </h5>
             <button
               onClick={() => setShowAllLanguages(!showAllLanguages)}
               className="text-xs text-cyan-400 hover:underline flex items-center gap-1 cursor-pointer"
             >
-              <span>{showAllLanguages ? 'Collapse' : 'Show all'}</span>
+              <span>{showAllLanguages ? t('footer.collapse', 'Collapse') : t('footer.showAll', 'Show all')}</span>
               <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showAllLanguages ? 'rotate-180' : ''}`} />
             </button>
           </div>
@@ -233,8 +235,10 @@ export const Footer: React.FC<FooterProps> = ({ onSelectTool }) => {
             {LANGUAGES.map((lang, idx) => (
               <button
                 key={idx}
-                onClick={() => alert(`Language set to ${lang}`)}
-                className="text-left hover:text-cyan-400 transition cursor-pointer py-1 truncate"
+                onClick={() => setLanguage(lang)}
+                className={`text-left transition cursor-pointer py-1 truncate ${
+                  currentLang === lang ? 'text-cyan-400 font-bold underline' : 'hover:text-cyan-400 text-slate-400'
+                }`}
               >
                 {lang}
               </button>
@@ -244,8 +248,8 @@ export const Footer: React.FC<FooterProps> = ({ onSelectTool }) => {
 
         {/* Bottom copyright notice */}
         <div className="mt-12 pt-6 border-t border-slate-800/80 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
-          <p>© EditEverything. All rights reserved. Thank you for your time.</p>
-          <p>All trademarks and brands are property of their respective owners.</p>
+          <p>{t('footer.copyright', '© EditEverything. All rights reserved. Thank you for your time.')}</p>
+          <p>{t('footer.disclaimer', 'All trademarks and brands are property of their respective owners.')}</p>
         </div>
 
       </div>

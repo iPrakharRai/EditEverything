@@ -1,3 +1,4 @@
+import { useLanguage } from '../i18n/LanguageContext';
 import React from 'react';
 import { 
   ScanText,
@@ -23,6 +24,7 @@ interface HowToGuideProps {
 }
 
 export const HowToGuide: React.FC<HowToGuideProps> = ({ onSelectTool }) => {
+  const { t } = useLanguage();
   return (
     <section className="w-full bg-white/70 backdrop-blur-xs border-t border-slate-200/80 py-16 px-4 sm:px-6 lg:px-8 relative z-10">
       <div className="max-w-6xl mx-auto">
@@ -30,10 +32,10 @@ export const HowToGuide: React.FC<HowToGuideProps> = ({ onSelectTool }) => {
         {/* 1. Main How-To Section */}
         <div className="text-center mb-14">
           <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-800 tracking-tight mb-3">
-            How To Edit PDF & Image Files Online For Free
+            {t('guide.title', 'How To Edit PDF & Image Files Online For Free')}
           </h2>
           <p className="text-base sm:text-lg text-slate-600 max-w-2xl mx-auto">
-            Edit & Sign PDF and image files online for free. Read and edit text in images with AI OCR, fill out forms, change text, and download your edited documents and images directly in your browser.
+            {t('guide.subtitle', 'Edit & Sign PDF and image files online for free. Read and edit text in images with AI OCR, fill out forms, change text, and download your edited documents and images directly in your browser.')}
           </p>
         </div>
 
@@ -45,17 +47,17 @@ export const HowToGuide: React.FC<HowToGuideProps> = ({ onSelectTool }) => {
               <ScanText className="w-6 h-6" />
             </div>
             <div className="flex items-center gap-2 mb-2">
-              <h3 className="text-lg font-bold text-slate-800">Edit Text in Images (OCR)</h3>
+              <h3 className="text-lg font-bold text-slate-800">{t('guide.ocrCardTitle', 'Edit Text in Images (OCR)')}</h3>
               <span className="text-[10px] font-black px-1.5 py-0.5 rounded-full bg-cyan-200 text-cyan-900">NEW</span>
             </div>
             <p className="text-sm text-slate-600 leading-relaxed mb-3">
-              Upload any JPG or PNG. Our AI OCR detects words with exact coordinates, matches font styles and alignment, and lets you edit in-place and download.
+              {t('guide.ocrCardDesc', 'Upload any JPG or PNG. Our AI OCR detects words with exact coordinates, matches font styles and alignment, and lets you edit in-place and download.')}
             </p>
             <button 
               onClick={() => onSelectTool('image-text-editor')}
               className="text-xs font-bold text-[#0891b2] hover:text-[#008b9e] flex items-center gap-1 cursor-pointer"
             >
-              <span>Try Image Text Editor</span>
+              <span>{t('guide.tryOcrBtn', 'Try Image Text Editor')}</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>

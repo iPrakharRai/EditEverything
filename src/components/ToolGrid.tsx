@@ -1,3 +1,4 @@
+import { useLanguage } from '../i18n/LanguageContext';
 import React, { useState } from 'react';
 import { 
   PenTool, 
@@ -60,6 +61,20 @@ const ICON_MAP: Record<string, React.FC<{ className?: string; style?: React.CSSP
 };
 
 export const ToolGrid: React.FC<ToolGridProps> = ({ onSelectTool }) => {
+  const { t } = useLanguage();
+
+  const getCategoryLabel = (id: string, fallback: string) => {
+    const map: Record<string, string> = {
+      'all': t('tools.all', 'All Tools'),
+      'popular': t('tools.popular', 'Most Popular'),
+      'edit-sign': t('tools.editSign', 'Edit & Sign'),
+      'merge-split': t('tools.mergeSplit', 'Merge & Split'),
+      'convert': t('tools.convert', 'Convert'),
+      'organize': t('tools.organize', 'Organize & Layout'),
+      'security': t('tools.security', 'Security & Optimize'),
+    };
+    return map[id] || fallback;
+  };
   const [activeCategory, setActiveCategory] = useState<ToolCategory>('all');
   const [search, setSearch] = useState('');
 
@@ -88,7 +103,7 @@ export const ToolGrid: React.FC<ToolGridProps> = ({ onSelectTool }) => {
                   : 'bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-slate-200'
               }`}
             >
-              {cat.label}
+              {getCategoryLabel(cat.id, cat.label)}
             </button>
           ))}
         </div>
@@ -98,7 +113,7 @@ export const ToolGrid: React.FC<ToolGridProps> = ({ onSelectTool }) => {
           <Search className="w-4 h-4 sm:w-5 sm:h-5 absolute left-3.5 top-3 text-slate-400" />
           <input
             type="text"
-            placeholder="Search all tools..."
+            placeholder={t("tools.search", "Search all tools...")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-11 pr-4 py-2.5 text-sm sm:text-base bg-white border border-slate-200 rounded-full focus:outline-none focus:ring-2 focus:ring-cyan-500 shadow-xs"
