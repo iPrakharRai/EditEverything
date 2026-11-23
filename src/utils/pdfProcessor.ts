@@ -743,15 +743,17 @@ export async function detectPageImageBoxes(
     const saveOp = OPS.save ?? 10;
     const restoreOp = OPS.restore ?? 11;
     const transformOp = OPS.transform ?? 12;
+    const formBeginOp = OPS.paintFormXObjectBegin ?? 73;
+    const formEndOp = OPS.paintFormXObjectEnd ?? 74;
 
+    // All PDF image drawing operators (paintImageXObject, paintInlineImageXObject, paintImageXObjectRepeat, groups)
     const imageOps = new Set<number>([
       OPS.paintImageXObject ?? 85,
       OPS.paintInlineImageXObject ?? 86,
-      OPS.paintImageMaskXObject ?? 83,
       OPS.paintImageXObjectRepeat ?? 88,
-      OPS.paintImageMaskXObjectRepeat ?? 89,
       OPS.paintImageMaskXObjectGroup ?? 84,
       OPS.paintInlineImageXObjectGroup ?? 87,
+      OPS.paintImageMaskXObjectRepeat ?? 89,
     ]);
 
     const stack: number[][] = [];
@@ -772,6 +774,13 @@ export async function detectPageImageBoxes(
         currentMatrix = stack.pop() || [1, 0, 0, 1, 0, 0];
       } else if (fn === transformOp && Array.isArray(args) && args.length >= 6) {
         currentMatrix = multiplyTransform(currentMatrix, args);
+      } else if (fn === formBeginOp) {
+        stack.push([...currentMatrix]);
+        if (Array.isArray(args) && Array.isArray(args[0]) && args[0].length >= 6) {
+          currentMatrix = multiplyTransform(currentMatrix, args[0]);
+        }
+      } else if (fn === formEndOp) {
+        currentMatrix = stack.pop() || [1, 0, 0, 1, 0, 0];
       } else if (imageOps.has(fn)) {
         // PDF images map unit square [0,0] to [1,1]
         const p0 = applyTransform(currentMatrix, 0, 0);
@@ -791,9 +800,18 @@ export async function detectPageImageBoxes(
 
         const w = maxX - minX;
         const h = maxY - minY;
-        if (w > 2 && h > 2) {
-          const boxArea = w * h;
-          // An image is considered a background if it covers >= 88% of the page
+        const boxArea = w * h;
+
+        // An attached photo/image must have reasonable dimensions (at least 35x35 px, area >= 1500)
+        const isPhoto = (
+          w >= 35 && 
+          h >= 35 && 
+          boxArea >= 1500 && 
+          (w / h) <= 10 && 
+          (h / w) <= 10
+        );
+
+        if (isPhoto) {
           const isBackground = boxArea >= 0.88 * pageArea;
           boxes.push({ minX, minY, maxX, maxY, width: w, height: h, isBackground });
         }
@@ -810,7 +828,8 @@ export async function detectPageImageBoxes(
 export function detectRasterPhotoBoxes(
   d: Uint8ClampedArray,
   width: number,
-  height: number
+  height: number,
+  threshold: number = 125
 ): ImageBoundingBox[] {
   const tileSize = 24;
   const cols = Math.floor(width / tileSize);
@@ -821,7 +840,6 @@ export function detectRasterPhotoBoxes(
   for (let ty = 0; ty < rows; ty++) {
     for (let tx = 0; tx < cols; tx++) {
       let colorCount = 0;
-      let midLumCount = 0;
       const totalPixels = tileSize * tileSize;
 
       for (let py = 0; py < tileSize; py++) {
@@ -831,14 +849,13 @@ export function detectRasterPhotoBoxes(
           const x = tx * tileSize + px;
           const p = rowOff + x * 4;
           const r = d[p], g = d[p + 1], b = d[p + 2];
-          const lum = 0.299 * r + 0.587 * g + 0.114 * b;
           const sat = Math.max(r, g, b) - Math.min(r, g, b);
-          if (sat > 25) colorCount++;
-          if (lum > 35 && lum < 225) midLumCount++;
+          if (sat > 35) colorCount++;
         }
       }
 
-      if (colorCount > totalPixels * 0.18 || midLumCount > totalPixels * 0.40) {
+      // Only mark tiles with strong multi-color saturation (photos, pictures)
+      if (colorCount > totalPixels * 0.40) {
         tileIsPhoto[ty * cols + tx] = 1;
       }
     }
@@ -888,7 +905,8 @@ export function detectRasterPhotoBoxes(
         const h = maxY - minY;
         const boxArea = w * h;
 
-        if (w >= 48 && h >= 48 && count >= 4) {
+        // Substantial photo block: at least 100x70, ratio <= 5
+        if (w >= 100 && h >= 70 && boxArea >= 8000 && (w / h) <= 5 && (h / w) <= 5 && count >= 8) {
           const isBackground = boxArea >= 0.88 * pageArea;
           boxes.push({ minX, minY, maxX, maxY, width: w, height: h, isBackground });
         }
@@ -904,6 +922,7 @@ export interface InvertPdfOptions {
   threshold?: number; // 0-255, default 125
   dpiScale?: number;  // 1.5 - 2.5, default 2.0
   preserveImages?: boolean; // default true
+  isImageInput?: boolean;
 }
 
 export function processCanvasPixels(
@@ -916,19 +935,26 @@ export function processCanvasPixels(
     threshold: number;
     preserveImages: boolean;
     imageBoxes: ImageBoundingBox[];
+    isImageInput?: boolean;
   }
 ) {
-  const { mode, threshold, preserveImages, imageBoxes } = options;
+  const { mode, threshold, preserveImages, imageBoxes, isImageInput } = options;
 
   let isImagePixel: Uint8Array | null = null;
   if (preserveImages) {
-    let effectiveBoxes = imageBoxes.filter(b => !b.isBackground);
-    if (effectiveBoxes.length === 0) {
-      effectiveBoxes = detectRasterPhotoBoxes(origD, canvasWidth, canvasHeight).filter(b => !b.isBackground);
+    let candidateBoxes = imageBoxes.filter(b => !b.isBackground);
+
+    // Only run raster detection if this was an explicit image file upload with no vector operators
+    if (candidateBoxes.length === 0 && isImageInput) {
+      candidateBoxes = detectRasterPhotoBoxes(origD, canvasWidth, canvasHeight, threshold).filter(b => !b.isBackground);
     }
-    if (effectiveBoxes.length > 0) {
+
+    // All embedded attached images are preserved in 100% true natural colors
+    const validPhotoBoxes = candidateBoxes;
+
+    if (validPhotoBoxes.length > 0) {
       isImagePixel = new Uint8Array(canvasWidth * canvasHeight);
-      for (const box of effectiveBoxes) {
+      for (const box of validPhotoBoxes) {
         for (let y = box.minY; y < box.maxY; y++) {
           const rowOff = y * canvasWidth;
           for (let x = box.minX; x < box.maxX; x++) {
@@ -940,7 +966,7 @@ export function processCanvasPixels(
   }
 
   for (let p = 0, pIdx = 0; p < d.length; p += 4, pIdx++) {
-    // If pixel is within an attached image and preserveImages is true, retain original pixel!
+    // If pixel is within a validated attached photo and preserveImages is true, KEEP 100% ORIGINAL PIXEL!
     if (preserveImages && isImagePixel && isImagePixel[pIdx] === 1) {
       d[p] = origD[p];
       d[p + 1] = origD[p + 1];
@@ -954,7 +980,7 @@ export function processCanvasPixels(
     const b = origD[p + 2];
     const a = origD[p + 3];
 
-    // Transparent pixel -> Pure white
+    // Transparent pixel -> Pure white paper
     if (a < 10) {
       d[p] = 255;
       d[p + 1] = 255;
@@ -966,14 +992,15 @@ export function processCanvasPixels(
     const lum = 0.299 * r + 0.587 * g + 0.114 * b;
     const maxC = Math.max(r, g, b);
     const minC = Math.min(r, g, b);
-    const isColor = (maxC - minC) > 35;
+    const sat = maxC - minC;
 
     if (mode === 'full-invert') {
       d[p] = 255 - r;
       d[p + 1] = 255 - g;
       d[p + 2] = 255 - b;
     } else if (mode === 'monochrome') {
-      if (lum < threshold) {
+      const isDarkBg = (maxC < threshold && sat < 40) || lum < 38;
+      if (isDarkBg) {
         d[p] = 255;
         d[p + 1] = 255;
         d[p + 2] = 255;
@@ -984,24 +1011,24 @@ export function processCanvasPixels(
       }
     } else if (mode === 'text-only') {
       // Clean background & keep text only (Slide ink-saver)
-      const isWhiteText = lum > Math.min(threshold + 30, 175) && (maxC - minC) < 45;
-      const isDarkOutlineOrText = lum < 65 && !isColor;
+      const isLightText = lum > Math.min(threshold + 25, 175) && sat < 45;
+      const isDarkOutlineOrText = lum < 60 && sat < 30;
 
-      if (isWhiteText || isDarkOutlineOrText) {
+      if (isLightText || isDarkOutlineOrText) {
         d[p] = 0;
         d[p + 1] = 0;
         d[p + 2] = 0;
       } else {
-        if (lum > 110) {
+        if (lum > 105) {
           d[p] = 255;
           d[p + 1] = 255;
           d[p + 2] = 255;
         } else {
-          const bR = Math.min(255, Math.round(r * 1.7 + 75));
-          const bG = Math.min(255, Math.round(g * 1.7 + 75));
-          const bB = Math.min(255, Math.round(b * 1.7 + 75));
+          const bR = Math.min(255, Math.round(r * 1.8 + 80));
+          const bG = Math.min(255, Math.round(g * 1.8 + 80));
+          const bB = Math.min(255, Math.round(b * 1.8 + 80));
           const bLum = 0.299 * bR + 0.587 * bG + 0.114 * bB;
-          if (bLum > 195) {
+          if (bLum > 190) {
             d[p] = 255;
             d[p + 1] = 255;
             d[p + 2] = 255;
@@ -1014,24 +1041,40 @@ export function processCanvasPixels(
       }
     } else {
       // smart-clean (Recommended)
-      if (lum < threshold) {
-        // Dark background -> Clean pure white paper
+      // Check if pixel is dark background (black, dark gray, dark navy, dark slate)
+      const isDarkBackground = (maxC < threshold && sat < 40) || lum < 38;
+
+      if (isDarkBackground) {
+        // Clean to pure white paper
         d[p] = 255;
         d[p + 1] = 255;
         d[p + 2] = 255;
       } else {
-        // Light text or graphics on dark background
-        if (isColor) {
-          const factor = lum > 160 ? 0.65 : 0.85;
-          d[p] = Math.round(r * factor);
-          d[p + 1] = Math.round(g * factor);
-          d[p + 2] = Math.round(b * factor);
+        // Pixel is text, table border, or graphic element!
+        // Check if it is a strong vivid chromatic color (like red, blue, green) vs light text (white, cream, gold, yellow, silver, gray)
+        const isVividAccent = sat > 65 && minC < 100 && (maxC / (minC + 1) > 2.0);
+
+        if (isVividAccent) {
+          // Saturated accent (e.g. red badge, blue icon, green bullet):
+          // Darken to a rich, high-contrast readable ink tone on white paper
+          d[p] = Math.round(r * 0.45);
+          d[p + 1] = Math.round(g * 0.45);
+          d[p + 2] = Math.round(b * 0.45);
         } else {
-          // Crisp dark text
-          const darkVal = Math.min(45, Math.max(0, 255 - lum));
-          d[p] = darkVal;
-          d[p + 1] = darkVal;
-          d[p + 2] = darkVal;
+          // Text / Borders (white, cream, gold, silver, gray, yellow):
+          // Smooth anti-aliased edge calculation for crisp typographic quality
+          const tDist = lum - threshold;
+          if (tDist < 45 && tDist > 0) {
+            const edgeFactor = tDist / 45;
+            const v = Math.round(255 * (1 - edgeFactor));
+            d[p] = v;
+            d[p + 1] = v;
+            d[p + 2] = v;
+          } else {
+            d[p] = 0;
+            d[p + 1] = 0;
+            d[p + 2] = 0;
+          }
         }
       }
     }
@@ -1078,6 +1121,7 @@ export async function invertPdfBackground(
       threshold,
       preserveImages,
       imageBoxes,
+      isImageInput: false,
     });
 
     ctx.putImageData(imgData, 0, 0);
@@ -1126,13 +1170,14 @@ export async function invertImageFile(
         const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
         const origData = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
-        const imageBoxes = detectRasterPhotoBoxes(origData.data, canvas.width, canvas.height);
+        const imageBoxes = detectRasterPhotoBoxes(origData.data, canvas.width, canvas.height, options.threshold ?? 125);
 
         processCanvasPixels(imgData.data, origData.data, canvas.width, canvas.height, {
           mode: options.mode || 'smart-clean',
           threshold: options.threshold ?? 125,
           preserveImages: options.preserveImages ?? true,
           imageBoxes,
+          isImageInput: true,
         });
 
         ctx.putImageData(imgData, 0, 0);

@@ -121,7 +121,8 @@ export const InvertPdf: React.FC<InvertPdfProps> = ({ onBack, initialFile }) => 
             mode,
             threshold,
             preserveImages,
-            imageBoxes: []
+            imageBoxes: [],
+            isImageInput: true,
           });
 
           cleanCtx.putImageData(imgData, 0, 0);
@@ -167,7 +168,8 @@ export const InvertPdf: React.FC<InvertPdfProps> = ({ onBack, initialFile }) => 
             mode,
             threshold,
             preserveImages,
-            imageBoxes
+            imageBoxes,
+            isImageInput: false,
           });
 
           cleanCtx.putImageData(imgData, 0, 0);
