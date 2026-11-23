@@ -137,6 +137,15 @@ export const TOOLS: ToolDef[] = [
     color: '#7f8c8d',
   },
   {
+    id: 'invert-pdf',
+    name: 'Invert & Clean Dark PDF',
+    description: 'Clean black or dark backgrounds of PDFs and make them white with crisp readable text.',
+    category: ['popular', 'organize', 'convert', 'all'],
+    icon: 'Contrast',
+    badge: 'New',
+    color: '#0891b2',
+  },
+  {
     id: 'grayscale',
     name: 'Grayscale PDF',
     description: 'Convert colored PDFs to pure black & white or grayscale for ink saving.',

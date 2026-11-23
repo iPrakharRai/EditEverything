@@ -526,6 +526,13 @@ export const Navbar: React.FC<NavbarProps> = ({ onSelectTool, activeToolId, onGo
                     </button>
                   </li>
                   <li>
+                    <button onClick={() => handleToolClick('invert-pdf')} className="flex items-center gap-2 text-slate-700 hover:text-cyan-600 font-semibold text-[15px] transition cursor-pointer w-full text-left py-1.5">
+                      <Contrast className="w-5 h-5 text-cyan-500 shrink-0" />
+                      <span>Invert & Clean Dark PDF</span>
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-cyan-100 text-cyan-800 ml-auto">New</span>
+                    </button>
+                  </li>
+                  <li>
                     <button onClick={() => handleToolClick('grayscale')} className="flex items-center gap-2 text-slate-700 hover:text-pink-600 font-semibold text-[15px] transition cursor-pointer w-full text-left py-1.5">
                       <Contrast className="w-5 h-5 text-pink-500 shrink-0" />
                       <span>Grayscale</span>

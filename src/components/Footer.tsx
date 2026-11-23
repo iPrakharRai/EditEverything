@@ -43,6 +43,7 @@ export const Footer: React.FC<FooterProps> = ({ onSelectTool }) => {
     { name: 'N-up PDF', toolId: 'page-numbers' },
     { name: 'OCR PDF', toolId: 'ocr' },
     { name: 'Edit Text in Image (OCR)', toolId: 'image-text-editor' },
+    { name: 'Invert & Clean Dark PDF', toolId: 'invert-pdf' },
     { name: 'PDF Editor', toolId: 'edit' },
     { name: 'PDF Page Numbers', toolId: 'page-numbers' },
     { name: 'PDF to Excel', toolId: 'pdf-to-text' },

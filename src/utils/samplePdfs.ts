@@ -1,6 +1,6 @@
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 
-export async function generateSamplePdfBytesAsync(type: 'contract' | 'invoice' | 'report' | 'form'): Promise<Uint8Array> {
+export async function generateSamplePdfBytesAsync(type: 'contract' | 'invoice' | 'report' | 'form' | 'dark-mode'): Promise<Uint8Array> {
   const doc = await PDFDocument.create();
   const fontBold = await doc.embedFont(StandardFonts.HelveticaBold);
   const fontRegular = await doc.embedFont(StandardFonts.Helvetica);
@@ -235,7 +235,7 @@ export async function generateSamplePdfBytesAsync(type: 'contract' | 'invoice' |
         color: rgb(0.5, 0.5, 0.5),
       });
     }
-  } else {
+  } else if (type === 'form') {
     // Application Form
     const page = doc.addPage([595.28, 841.89]);
     page.drawText('EMPLOYMENT APPLICATION FORM', {
@@ -273,6 +273,79 @@ export async function generateSamplePdfBytesAsync(type: 'contract' | 'invoice' |
       });
       fy -= 25;
     }
+  } else if (type === 'dark-mode') {
+    // Dark mode PDF with black background & white text
+    const page1 = doc.addPage([595.28, 841.89]);
+    // Draw pure dark background
+    page1.drawRectangle({
+      x: 0,
+      y: 0,
+      width: 595.28,
+      height: 841.89,
+      color: rgb(0.08, 0.1, 0.14),
+    });
+
+    page1.drawText('DARK MODE DOCUMENT (BLACK BACKGROUND)', {
+      x: 50,
+      y: 770,
+      size: 18,
+      font: fontBold,
+      color: rgb(1, 1, 1),
+    });
+
+    page1.drawText('Sample Document to Test Invert & Background Cleaning', {
+      x: 50,
+      y: 746,
+      size: 11,
+      font: fontBold,
+      color: rgb(0, 0.85, 0.95),
+    });
+
+    page1.drawLine({
+      start: { x: 50, y: 735 },
+      end: { x: 545, y: 735 },
+      thickness: 1.5,
+      color: rgb(0.2, 0.3, 0.4),
+    });
+
+    const bodyText = [
+      'Problem with Dark Mode PDFs:',
+      'Dark mode presentations and e-books look stylish on screens, but when printed,',
+      'they waste massive amounts of black ink, cause smearing, and are unreadable.',
+      '',
+      'How EditEverything Invert & Clean Works:',
+      '1. It accurately analyzes the luminance of every element and background pixel.',
+      '2. The dark or black background is cleanly converted into pure white (255, 255, 255).',
+      '3. All white, silver, or light-colored text is inverted to crisp, dark black text.',
+      '4. Color charts, diagrams, and accents are preserved with high-contrast visibility.',
+      '',
+      'Summary of Benefits:',
+      '• Saves over 90% printer toner and cartridge ink.',
+      '• Makes dark mode PDFs comfortable to read on paper and in direct sunlight.',
+      '• Works 100% locally in your browser with zero data leakage or upload latency.',
+      '',
+      'Date Generated: November 24, 2026 | Document ID: DARK-INV-9942',
+    ];
+
+    let yOffset = 690;
+    for (const line of bodyText) {
+      page1.drawText(line, {
+        x: 50,
+        y: yOffset,
+        size: 11,
+        font: line.startsWith('Problem') || line.startsWith('How') || line.startsWith('Summary') ? fontBold : fontRegular,
+        color: line.startsWith('•') ? rgb(0.4, 0.85, 0.95) : rgb(0.9, 0.92, 0.95),
+      });
+      yOffset -= 24;
+    }
+
+    page1.drawText('Page 1 of 1 — Dark Background Source Document', {
+      x: 180,
+      y: 40,
+      size: 9,
+      font: fontRegular,
+      color: rgb(0.6, 0.65, 0.7),
+    });
   }
 
   return await doc.save();
@@ -281,7 +354,7 @@ export async function generateSamplePdfBytesAsync(type: 'contract' | 'invoice' |
 // Synchronous wrapper cache
 let cachedPdfs: Record<string, Uint8Array> = {};
 
-export function generateSamplePdfBytes(type: 'contract' | 'invoice' | 'report' | 'form'): Uint8Array {
+export function generateSamplePdfBytes(type: 'contract' | 'invoice' | 'report' | 'form' | 'dark-mode'): Uint8Array {
   if (cachedPdfs[type]) {
     return cachedPdfs[type];
   }

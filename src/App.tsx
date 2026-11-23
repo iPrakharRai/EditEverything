@@ -20,6 +20,7 @@ import { ProtectUnlock } from './tools/ProtectUnlock';
 import { ConvertTools } from './tools/ConvertTools';
 import { OrganizeAndSecurity } from './tools/OrganizeAndSecurity';
 import { ImageTextEditor } from './tools/ImageTextEditor';
+import { InvertPdf } from './tools/InvertPdf';
 
 export function App() {
   const [activeToolId, setActiveToolId] = useState<string | null>(null);
@@ -95,6 +96,14 @@ export function App() {
             initialFile={preloadedFile}
             onBack={handleGoHome}
             onFileLoadedStateChange={setIsEditorDocumentLoaded}
+          />
+        )}
+
+        {/* Invert & Clean Dark PDF */}
+        {activeToolId === 'invert-pdf' && (
+          <InvertPdf
+            onBack={handleGoHome}
+            initialFile={preloadedFile}
           />
         )}
 

@@ -1,3 +1,7 @@
+import * as pdfjsLib from 'pdfjs-dist';
+if (typeof window !== 'undefined' && !pdfjsLib.GlobalWorkerOptions.workerSrc) {
+  pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
+}
 import { PDFDocument, rgb, degrees, StandardFonts } from 'pdf-lib';
 import { PlacedElement, EditedExistingText } from '../types';
 
@@ -698,4 +702,120 @@ export function downloadBlob(data: Uint8Array | Blob, filename: string, mimeType
   a.click();
   document.body.removeChild(a);
   setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+export interface InvertPdfOptions {
+  mode: 'smart-clean' | 'full-invert' | 'monochrome';
+  threshold?: number; // 0-255, default 125
+  dpiScale?: number;  // 1.5 - 2.5, default 2.0
+}
+
+export async function invertPdfBackground(
+  pdfBuffer: Uint8Array,
+  options: InvertPdfOptions = { mode: 'smart-clean', threshold: 125, dpiScale: 2.0 },
+  onProgress?: (current: number, total: number) => void
+): Promise<Uint8Array> {
+  const clonedBytes = new Uint8Array(pdfBuffer.slice(0));
+  const loadingTask = pdfjsLib.getDocument({ data: clonedBytes });
+  const pdfDoc = await loadingTask.promise;
+  const numPages = pdfDoc.numPages;
+
+  const outDoc = await PDFDocument.create();
+  const dpiScale = options.dpiScale || 2.0;
+  const threshold = options.threshold ?? 125;
+  const mode = options.mode || 'smart-clean';
+
+  for (let i = 1; i <= numPages; i++) {
+    onProgress?.(i, numPages);
+    const page = await pdfDoc.getPage(i);
+    const viewport = page.getViewport({ scale: dpiScale });
+
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.floor(viewport.width);
+    canvas.height = Math.floor(viewport.height);
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    if (!ctx) continue;
+
+    await page.render({ canvasContext: ctx, viewport }).promise;
+
+    const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const d = imgData.data;
+
+    for (let p = 0; p < d.length; p += 4) {
+      const r = d[p];
+      const g = d[p + 1];
+      const b = d[p + 2];
+      const a = d[p + 3];
+
+      if (a < 10) {
+        d[p] = 255;
+        d[p + 1] = 255;
+        d[p + 2] = 255;
+        d[p + 3] = 255;
+        continue;
+      }
+
+      const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+
+      if (mode === 'full-invert') {
+        d[p] = 255 - r;
+        d[p + 1] = 255 - g;
+        d[p + 2] = 255 - b;
+      } else if (mode === 'monochrome') {
+        if (lum < threshold) {
+          d[p] = 255;
+          d[p + 1] = 255;
+          d[p + 2] = 255;
+        } else {
+          d[p] = 0;
+          d[p + 1] = 0;
+          d[p + 2] = 0;
+        }
+      } else {
+        // smart-clean (Recommended)
+        if (lum < threshold) {
+          // Dark background -> Clean pure white
+          d[p] = 255;
+          d[p + 1] = 255;
+          d[p + 2] = 255;
+        } else {
+          // Light text or graphics on dark background
+          const maxC = Math.max(r, g, b);
+          const minC = Math.min(r, g, b);
+          const isColor = (maxC - minC) > 35;
+
+          if (isColor) {
+            const factor = lum > 160 ? 0.65 : 0.85;
+            d[p] = Math.round(r * factor);
+            d[p + 1] = Math.round(g * factor);
+            d[p + 2] = Math.round(b * factor);
+          } else {
+            // Light text -> Crisp dark text
+            const darkVal = Math.min(50, Math.max(0, 255 - lum));
+            d[p] = darkVal;
+            d[p + 1] = darkVal;
+            d[p + 2] = darkVal;
+          }
+        }
+      }
+    }
+
+    ctx.putImageData(imgData, 0, 0);
+
+    const unscaledViewport = page.getViewport({ scale: 1.0 });
+    const pngBlob = await new Promise<Blob | null>(res => canvas.toBlob(res, 'image/png'));
+    if (pngBlob) {
+      const pngBuffer = new Uint8Array(await pngBlob.arrayBuffer());
+      const embeddedPng = await outDoc.embedPng(pngBuffer);
+      const outPage = outDoc.addPage([unscaledViewport.width, unscaledViewport.height]);
+      outPage.drawImage(embeddedPng, {
+        x: 0,
+        y: 0,
+        width: unscaledViewport.width,
+        height: unscaledViewport.height,
+      });
+    }
+  }
+
+  return await outDoc.save();
 }
