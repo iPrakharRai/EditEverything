@@ -1,0 +1,254 @@
+import React, { useState } from 'react';
+import { 
+  ShieldCheck, 
+  Clock, 
+  FileCheck, 
+  Heart, 
+  Globe, 
+  Mail, 
+  ExternalLink,
+  ChevronDown
+} from 'lucide-react';
+
+interface FooterProps {
+  onSelectTool: (toolId: string) => void;
+}
+
+export const Footer: React.FC<FooterProps> = ({ onSelectTool }) => {
+  const [showAllLanguages, setShowAllLanguages] = useState(false);
+
+  const ALL_TOOLS = [
+    { name: 'Add PDF Page Numbers', toolId: 'page-numbers' },
+    { name: 'Alternate & Mix PDF', toolId: 'merge' },
+    { name: 'Bates Numbering PDF', toolId: 'bates-numbering' },
+    { name: 'Compress PDF', toolId: 'compress' },
+    { name: 'Create PDF Bookmarks', toolId: 'edit' },
+    { name: 'Crop PDF', toolId: 'crop' },
+    { name: 'Delete PDF Annotations', toolId: 'edit' },
+    { name: 'Delete PDF Pages', toolId: 'delete-pages' },
+    { name: 'Deskew PDF', toolId: 'rotate' },
+    { name: 'Edit PDF Metadata', toolId: 'metadata' },
+    { name: 'Extract Images from PDF', toolId: 'pdf-to-images' },
+    { name: 'Extract PDF Pages', toolId: 'split' },
+    { name: 'Fill & Sign PDF', toolId: 'fill-sign' },
+    { name: 'Flatten PDF', toolId: 'flatten' },
+    { name: 'Flip PDF', toolId: 'rotate' },
+    { name: 'Grayscale PDF', toolId: 'grayscale' },
+    { name: 'Header & Footer PDF', toolId: 'header-footer' },
+    { name: 'HTML to PDF', toolId: 'images-to-pdf' },
+    { name: 'JPG to PDF', toolId: 'images-to-pdf' },
+    { name: 'Merge PDF', toolId: 'merge' },
+    { name: 'N-up PDF', toolId: 'page-numbers' },
+    { name: 'OCR PDF', toolId: 'ocr' },
+    { name: 'Edit Text in Image (OCR)', toolId: 'image-text-editor' },
+    { name: 'PDF Editor', toolId: 'edit' },
+    { name: 'PDF Page Numbers', toolId: 'page-numbers' },
+    { name: 'PDF to Excel', toolId: 'pdf-to-text' },
+    { name: 'PDF to JPG', toolId: 'pdf-to-images' },
+    { name: 'PDF to PowerPoint', toolId: 'pdf-to-images' },
+    { name: 'PDF to Text', toolId: 'pdf-to-text' },
+    { name: 'PDF to Word', toolId: 'pdf-to-text' },
+    { name: 'Protect PDF', toolId: 'protect' },
+    { name: 'Repair PDF', toolId: 'compress' },
+    { name: 'Resize PDF', toolId: 'resize' },
+    { name: 'Rotate PDF', toolId: 'rotate' },
+    { name: 'Split PDF by bookmarks', toolId: 'split' },
+    { name: 'Split PDF by pages', toolId: 'split' },
+    { name: 'Split PDF by size', toolId: 'split' },
+    { name: 'Split PDF by text', toolId: 'split' },
+    { name: 'Split PDF in half', toolId: 'split' },
+    { name: 'Unlock PDF', toolId: 'unlock' },
+    { name: 'Visual Combine & Reorder PDF', toolId: 'delete-pages' },
+    { name: 'Watermark PDF', toolId: 'watermark' },
+    { name: 'Word to PDF', toolId: 'edit' },
+  ];
+
+  const LANGUAGES = [
+    'العربية', 'Bahasa Indonesia', 'Deutsch', 'Dansk', 'Český', 'English',
+    'Español', 'Ελληνικά', 'Français', 'Italiano', '日本語', '한국어',
+    '简体中文', '繁體中文', 'हिन्दी', 'עברית', 'Magyar', 'Nederlands',
+    'Norsk', 'Polski', 'Português', 'Română', 'Русский', 'Suomi',
+    'Svenska', 'ภาษาไทย', 'Tiếng Việt', 'Türkçe', 'Українська'
+  ];
+
+  return (
+    <footer className="bg-slate-900 text-slate-400 text-sm border-t border-slate-800 w-full select-none">
+      
+      {/* 1. Value Proposition Bar */}
+      <div className="border-b border-slate-800 py-10 bg-slate-950/70 w-full">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center md:text-left">
+            
+            <div className="flex items-center justify-center md:justify-start gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-[#00bed6]/10 text-cyan-400 flex items-center justify-center shrink-0 shadow-inner">
+                <ShieldCheck className="w-6 h-6" />
+              </div>
+              <div>
+                <h4 className="text-white font-bold text-base">Files stay private</h4>
+                <p className="text-xs sm:text-sm text-slate-400">Processed locally in your browser when possible</p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-center md:justify-start gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-blue-500/10 text-blue-400 flex items-center justify-center shrink-0 shadow-inner">
+                <Clock className="w-6 h-6" />
+              </div>
+              <div>
+                <h4 className="text-white font-bold text-base">Instant Processing</h4>
+                <p className="text-xs sm:text-sm text-slate-400">Blazing fast client-side PDF rendering & execution</p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-center md:justify-start gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-400 flex items-center justify-center shrink-0 shadow-inner">
+                <FileCheck className="w-6 h-6" />
+              </div>
+              <div>
+                <h4 className="text-white font-bold text-base">Free service</h4>
+                <p className="text-xs sm:text-sm text-slate-400">Documents up to 200 pages or 50 MB and 3 tasks/hour</p>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      {/* 2. Main Footer Directory (Resources, API, Legal, Contact) */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-8 lg:gap-12 mb-12">
+          
+          {/* Brand info */}
+          <div className="col-span-2">
+            <div className="flex items-center gap-2.5 mb-4">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#00e5ff] via-[#00bed6] to-[#0891b2] flex items-center justify-center text-white font-black text-xs tracking-tight shadow-sm shadow-cyan-500/20">
+                EE
+              </div>
+              <span className="text-2xl font-extrabold text-white tracking-tight">
+                Edit<span className="text-transparent bg-clip-text bg-gradient-to-r from-[#00b4d8] to-[#00bed6]">Everything</span>
+              </span>
+            </div>
+            <p className="text-xs sm:text-sm text-slate-400 leading-relaxed mb-6 max-w-sm">
+              We help with your PDF & image tasks. Easy, pleasant, and productive PDF & image editor packed with 40+ tools for editing, converting, merging, splitting, signing, and organizing documents.
+            </p>
+            <div className="flex items-center gap-2 text-xs sm:text-sm text-slate-500">
+              <span>Made with</span>
+              <Heart className="w-4 h-4 text-rose-500 fill-rose-500" />
+              <span>in Amsterdam</span>
+            </div>
+          </div>
+
+          {/* Resources */}
+          <div>
+            <h5 className="text-white font-bold text-xs sm:text-sm uppercase tracking-wider mb-4">
+              Resources
+            </h5>
+            <ul className="space-y-2.5 text-xs sm:text-sm">
+              <li><a href="#pricing" onClick={(e) => { e.preventDefault(); alert('Free Web tier active.'); }} className="hover:text-cyan-400 transition">Pricing & Upgrade</a></li>
+              <li><a href="#desktop" onClick={(e) => { e.preventDefault(); alert('EditEverything Desktop for Windows and Mac.'); }} className="hover:text-cyan-400 transition">EditEverything Desktop</a></li>
+              <li><a href="#gsuite" onClick={(e) => { e.preventDefault(); alert('EditEverything for Google Workspace.'); }} className="hover:text-cyan-400 transition">EditEverything for G Suite</a></li>
+              <li><a href="#education" onClick={(e) => { e.preventDefault(); alert('EditEverything for Education.'); }} className="hover:text-cyan-400 transition">EditEverything for Education</a></li>
+              <li><a href="#about" onClick={(e) => { e.preventDefault(); alert('EditEverything - Easy, pleasant and productive PDF editor.'); }} className="hover:text-cyan-400 transition">About</a></li>
+              <li><a href="#blog" onClick={(e) => { e.preventDefault(); alert('EditEverything Engineering Blog.'); }} className="hover:text-cyan-400 transition">Blog</a></li>
+            </ul>
+          </div>
+
+          {/* API & Legal */}
+          <div>
+            <h5 className="text-white font-bold text-xs sm:text-sm uppercase tracking-wider mb-4">
+              API
+            </h5>
+            <ul className="space-y-2.5 text-xs sm:text-sm mb-6">
+              <li><a href="#api" onClick={(e) => { e.preventDefault(); alert('HTML to PDF API documentation.'); }} className="hover:text-cyan-400 transition">HTML to PDF API</a></li>
+              <li><a href="#docs" onClick={(e) => { e.preventDefault(); alert('EditEverything Developer Documentation.'); }} className="hover:text-cyan-400 transition">Developer Docs</a></li>
+            </ul>
+
+            <h5 className="text-white font-bold text-xs sm:text-sm uppercase tracking-wider mb-3">
+              Contact
+            </h5>
+            <a 
+              href="mailto:hi@editeverything.com?subject=Hello" 
+              className="text-xs sm:text-sm text-cyan-400 hover:text-cyan-300 flex items-center gap-1.5 transition"
+            >
+              <Mail className="w-3.5 h-3.5" />
+              <span>hi@editeverything.com</span>
+            </a>
+          </div>
+
+          {/* Legal */}
+          <div>
+            <h5 className="text-white font-bold text-xs sm:text-sm uppercase tracking-wider mb-4">
+              Legal
+            </h5>
+            <ul className="space-y-2.5 text-xs sm:text-sm">
+              <li><a href="#terms" onClick={(e) => { e.preventDefault(); alert('EditEverything Terms of Use.'); }} className="hover:text-cyan-400 transition">Terms of Use</a></li>
+              <li><a href="#privacy" onClick={(e) => { e.preventDefault(); alert('Files stay secure and are deleted after processing.'); }} className="hover:text-cyan-400 transition">Privacy Policy</a></li>
+              <li><a href="#cookies" onClick={(e) => { e.preventDefault(); alert('Cookies and Privacy settings.'); }} className="hover:text-cyan-400 transition">Cookies</a></li>
+              <li><a href="#privacy-settings" onClick={(e) => { e.preventDefault(); alert('Privacy Settings.'); }} className="hover:text-cyan-400 transition">Privacy Settings</a></li>
+              <li><a href="#security" onClick={(e) => { e.preventDefault(); alert('Encryption & Sandboxed client execution.'); }} className="hover:text-cyan-400 transition">Security</a></li>
+              <li><a href="#sla" onClick={(e) => { e.preventDefault(); alert('EditEverything Service Level Agreement.'); }} className="hover:text-cyan-400 transition">SLA</a></li>
+            </ul>
+          </div>
+
+        </div>
+
+        {/* 3. Comprehensive List of Tools (All 42+ EditEverything Tools) */}
+        <div className="pt-8 border-t border-slate-800">
+          <h5 className="text-white font-bold text-xs sm:text-sm uppercase tracking-wider mb-4">
+            Tools
+          </h5>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-x-4 gap-y-2 text-xs">
+            {ALL_TOOLS.map((t, idx) => (
+              <button
+                key={idx}
+                type="button"
+                onClick={() => onSelectTool(t.toolId)}
+                className="text-left text-slate-400 hover:text-cyan-400 transition cursor-pointer truncate py-1"
+                title={t.name}
+              >
+                {t.name}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* 4. Languages Grid */}
+        <div className="pt-8 mt-8 border-t border-slate-800">
+          <div className="flex items-center justify-between mb-4">
+            <h5 className="text-white font-bold text-xs sm:text-sm uppercase tracking-wider flex items-center gap-2">
+              <Globe className="w-4 h-4 text-cyan-400" />
+              Languages
+            </h5>
+            <button
+              onClick={() => setShowAllLanguages(!showAllLanguages)}
+              className="text-xs text-cyan-400 hover:underline flex items-center gap-1 cursor-pointer"
+            >
+              <span>{showAllLanguages ? 'Collapse' : 'Show all'}</span>
+              <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showAllLanguages ? 'rotate-180' : ''}`} />
+            </button>
+          </div>
+
+          <div className={`grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2 text-xs text-slate-400 transition-all ${
+            showAllLanguages ? 'max-h-96' : 'max-h-16 overflow-hidden'
+          }`}>
+            {LANGUAGES.map((lang, idx) => (
+              <button
+                key={idx}
+                onClick={() => alert(`Language set to ${lang}`)}
+                className="text-left hover:text-cyan-400 transition cursor-pointer py-1 truncate"
+              >
+                {lang}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Bottom copyright notice */}
+        <div className="mt-12 pt-6 border-t border-slate-800/80 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
+          <p>© EditEverything. All rights reserved. Thank you for your time.</p>
+          <p>All trademarks and brands are property of their respective owners.</p>
+        </div>
+
+      </div>
+    </footer>
+  );
+};

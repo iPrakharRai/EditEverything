@@ -1,0 +1,780 @@
+import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
+import { 
+  ChevronDown, 
+  X, 
+  Globe, 
+  Clock, 
+  PenTool, 
+  Layers, 
+  Scissors, 
+  Minimize2, 
+  Trash2, 
+  Crop, 
+  Lock, 
+  Unlock, 
+  FileSignature, 
+  FileText, 
+  Image as ImageIcon, 
+  Sparkles, 
+  RotateCw, 
+  Stamp, 
+  Hash, 
+  AlignVerticalDistributeCenter, 
+  Binary, 
+  Contrast, 
+  Maximize, 
+  ScanText, 
+  FileCode, 
+  Eraser, 
+  Table, 
+  Presentation, 
+  Bot, 
+  Check
+} from 'lucide-react';
+
+interface NavbarProps {
+  onSelectTool: (toolId: string) => void;
+  activeToolId: string | null;
+  onGoHome: () => void;
+}
+
+export const Navbar: React.FC<NavbarProps> = ({ onSelectTool, activeToolId, onGoHome }) => {
+  const [isMegaMenuOpen, setIsMegaMenuOpen] = useState(false);
+  const [showPricingModal, setShowPricingModal] = useState(false);
+  const [showDesktopModal, setShowDesktopModal] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showLangModal, setShowLangModal] = useState(false);
+  const [selectedLang, setSelectedLang] = useState('English');
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setIsMegaMenuOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleToolClick = (toolId: string) => {
+    onSelectTool(toolId);
+    setIsMegaMenuOpen(false);
+  };
+
+  const LANGUAGES = [
+    'English', 'العربية', 'Bahasa Indonesia', 'Deutsch', 'Dansk', 'Český',
+    'Español', 'Ελληνικά', 'Français', 'Italiano', '日本語', '한국어',
+    '简体中文', '繁體中文', 'हिन्दी', 'עברית', 'Magyar', 'Nederlands',
+    'Norsk', 'Polski', 'Português', 'Română', 'Русский', 'Suomi',
+    'Svenska', 'ภาษาไทย', 'Tiếng Việt', 'Türkçe', 'Українська'
+  ];
+
+  return (
+    <header className="sticky top-0 z-50 bg-white/95 border-b border-slate-200/90 shadow-xs w-full select-none">
+      {/* 1. Main Navbar Header (Matching EditEverything Design Exactly) */}
+      <div className="w-full px-4 lg:px-8">
+        <div className="flex items-center justify-between h-16 max-w-7xl mx-auto">
+          
+          {/* Left: Brand Logo & Main Nav Items */}
+          <div className="flex items-center gap-6 xl:gap-8">
+            {/* Logo: Cyan-Teal EE Badge + EditEverything */}
+            <button 
+              onClick={onGoHome} 
+              className="flex items-center gap-2.5 group cursor-pointer text-left transition active:scale-95 shrink-0"
+            >
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#00e5ff] via-[#00bed6] to-[#0891b2] flex items-center justify-center text-white font-black text-sm tracking-tight shadow-md shadow-cyan-500/25 group-hover:scale-105 transition-transform">
+                EE
+              </div>
+              <span className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+                Edit<span className="text-transparent bg-clip-text bg-gradient-to-r from-[#00b4d8] to-[#0891b2]">Everything</span>
+              </span>
+            </button>
+
+            {/* Navigation links matching screenshot */}
+            <nav className="hidden md:flex items-center gap-1.5 lg:gap-3 text-base font-semibold text-slate-700">
+              
+              {/* All Tools with Chevron Down */}
+              <button
+                type="button"
+                onClick={() => setIsMegaMenuOpen(!isMegaMenuOpen)}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg transition cursor-pointer ${
+                  isMegaMenuOpen 
+                    ? 'bg-slate-100 text-[#00bed6]' 
+                    : 'hover:bg-slate-100/70 hover:text-slate-900'
+                }`}
+              >
+                <span>All Tools</span>
+                <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isMegaMenuOpen ? 'rotate-180 text-[#00bed6]' : 'text-slate-500'}`} />
+              </button>
+
+              <button 
+                onClick={() => handleToolClick('compress')} 
+                className="px-3 py-2 hover:text-slate-900 hover:bg-slate-100/70 rounded-lg transition cursor-pointer"
+              >
+                Compress
+              </button>
+
+              <button 
+                onClick={() => handleToolClick('edit')} 
+                className="px-3 py-2 hover:text-slate-900 hover:bg-slate-100/70 rounded-lg transition cursor-pointer"
+              >
+                Edit
+              </button>
+
+              <button 
+                onClick={() => handleToolClick('fill-sign')} 
+                className="px-3 py-2 hover:text-slate-900 hover:bg-slate-100/70 rounded-lg transition cursor-pointer"
+              >
+                Fill & Sign
+              </button>
+
+              <button 
+                onClick={() => handleToolClick('merge')} 
+                className="px-3 py-2 hover:text-slate-900 hover:bg-slate-100/70 rounded-lg transition cursor-pointer"
+              >
+                Merge
+              </button>
+
+              <button 
+                onClick={() => handleToolClick('delete-pages')} 
+                className="px-3 py-2 hover:text-slate-900 hover:bg-slate-100/70 rounded-lg transition cursor-pointer"
+              >
+                Delete Pages
+              </button>
+
+              <button 
+                onClick={() => handleToolClick('crop')} 
+                className="px-3 py-2 hover:text-slate-900 hover:bg-slate-100/70 rounded-lg transition cursor-pointer"
+              >
+                Crop
+              </button>
+            </nav>
+          </div>
+
+          {/* Right: Pricing, Desktop, Log In, Language */}
+          <div className="flex items-center gap-3.5 sm:gap-6 text-base font-semibold text-slate-600">
+            <button 
+              onClick={() => setShowPricingModal(true)} 
+              className="hover:text-slate-900 transition cursor-pointer hidden sm:block"
+            >
+              Pricing
+            </button>
+            
+            <button 
+              onClick={() => setShowDesktopModal(true)} 
+              className="hover:text-slate-900 transition cursor-pointer hidden sm:block"
+            >
+              Desktop
+            </button>
+
+            <button 
+              onClick={() => setShowLoginModal(true)} 
+              className="hover:text-slate-900 transition cursor-pointer"
+            >
+              Log in
+            </button>
+
+            <button 
+              onClick={() => setShowLangModal(true)} 
+              className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-500 hover:text-slate-800 transition cursor-pointer"
+              title="Change language"
+            >
+              <Globe className="w-5 h-5" />
+            </button>
+          </div>
+
+        </div>
+      </div>
+
+      {/* 2. MEGA MENU DROPDOWN (EXACT MATCH TO ATTACHED SCREENSHOT) */}
+      {isMegaMenuOpen && (
+        <div 
+          ref={menuRef}
+          className="absolute top-full left-0 w-full bg-white border-b border-slate-200 shadow-2xl z-50 animate-in fade-in slide-in-from-top-1 duration-150 py-8 px-4 sm:px-8 lg:px-12 max-h-[85vh] overflow-y-auto custom-scrollbar"
+        >
+          <div className="max-w-7xl mx-auto relative">
+            
+            {/* Top Right Close '✕' Button */}
+            <button
+              type="button"
+              onClick={() => setIsMegaMenuOpen(false)}
+              className="absolute -top-3 right-0 p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition cursor-pointer"
+              title="Close menu"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            {/* 6-Column Layout matching official EditEverything */}
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-x-8 gap-y-8 text-base">
+              
+              {/* Column 1: RECENT */}
+              <div>
+                <h4 className="text-xs sm:text-sm font-black uppercase tracking-wider text-slate-500 mb-3.5 flex items-center gap-1.5">
+                  <span>RECENT</span>
+                  <Clock className="w-3.5 h-3.5" />
+                </h4>
+                <ul className="space-y-2">
+                  <li>
+                    <button onClick={() => handleToolClick('edit')} className="flex items-center gap-2 text-slate-700 hover:text-sky-600 font-semibold text-[15px] transition cursor-pointer w-full text-left py-1.5">
+                      <PenTool className="w-5 h-5 text-sky-500 shrink-0" />
+                      <span>Edit PDF</span>
+                    </button>
+                  </li>
+                  <li>
+                    <button onClick={() => handleToolClick('image-text-editor')} className="flex items-center gap-2 text-slate-700 hover:text-cyan-600 font-semibold text-[15px] transition cursor-pointer w-full text-left py-1.5">
+                      <ScanText className="w-5 h-5 text-cyan-500 shrink-0" />
+                      <span>Edit Text in Image</span>
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-cyan-100 text-cyan-800 ml-auto">OCR</span>
+                    </button>
+                  </li>
+                  <li>
+                    <button onClick={() => handleToolClick('flatten')} className="flex items-center gap-2 text-slate-700 hover:text-teal-600 font-semibold text-[15px] transition cursor-pointer w-full text-left py-1.5">
+                      <span className="font-serif font-black text-sm text-teal-500 w-4 text-center">A</span>
+                      <span>Flatten</span>
+                    </button>
+                  </li>
+                  <li>
+                    <button onClick={() => handleToolClick('compress')} className="flex items-center gap-2 text-slate-700 hover:text-teal-600 font-semibold text-[15px] transition cursor-pointer w-full text-left py-1.5">
+                      <Minimize2 className="w-5 h-5 text-teal-500 shrink-0" />
+                      <span>Compress</span>
+                    </button>
+                  </li>
+                  <li>
+                    <button onClick={() => handleToolClick('split')} className="flex items-center gap-2 text-slate-700 hover:text-cyan-600 font-semibold text-[15px] transition cursor-pointer w-full text-left py-1.5">
+                      <Scissors className="w-5 h-5 text-cyan-500 shrink-0" />
+                      <span>Extract Pages</span>
+                    </button>
+                  </li>
+                  <li>
+                    <button onClick={() => handleToolClick('merge')} className="flex items-center gap-2 text-slate-700 hover:text-cyan-600 font-semibold text-[15px] transition cursor-pointer w-full text-left py-1.5">
+                      <Layers className="w-5 h-5 text-cyan-500 shrink-0" />
+                      <span>Merge</span>
+                    </button>
+                  </li>
+                  <li>
+                    <button onClick={() => handleToolClick('crop')} className="flex items-center gap-2 text-slate-700 hover:text-pink-600 font-semibold text-[15px] transition cursor-pointer w-full text-left py-1.5">
+                      <Crop className="w-5 h-5 text-pink-500 shrink-0" />
+                      <span>Crop</span>
+                    </button>
+                  </li>
+                </ul>
+              </div>
+
+              {/* Column 2: MERGE & SPLIT */}
+              <div>
+                <h4 className="text-xs sm:text-sm font-black uppercase tracking-wider text-slate-500 mb-3.5">
+                  MERGE
+                </h4>
+                <ul className="space-y-2 mb-6">
+                  <li>
+                    <button onClick={() => handleToolClick('merge')} className="flex items-center gap-2 text-slate-700 hover:text-cyan-600 font-semibold text-[15px] transition cursor-pointer w-full text-left py-1.5">
+                      <Layers className="w-5 h-5 text-cyan-500 shrink-0" />
+                      <span>Alternate & Mix</span>
+                    </button>
+                  </li>
+                  <li>
+                    <button onClick={() => handleToolClick('merge')} className="flex items-center gap-2 text-slate-700 hover:text-cyan-600 font-semibold text-[15px] transition cursor-pointer w-full text-left py-1.5">
+                      <Layers className="w-5 h-5 text-cyan-500 shrink-0" />
+                      <span>Merge</span>
+                    </button>
+                  </li>
+                  <li>
+                    <button onClick={() => handleToolClick('delete-pages')} className="flex items-center gap-2 text-slate-700 hover:text-cyan-600 font-semibold text-[15px] transition cursor-pointer w-full text-left py-1.5">
+                      <Layers className="w-5 h-5 text-cyan-500 shrink-0" />
+                      <span>Organize</span>
+                    </button>
+                  </li>
+                </ul>
+
+                <h4 className="text-xs sm:text-sm font-black uppercase tracking-wider text-slate-500 mb-3.5">
+                  SPLIT
+                </h4>
+                <ul className="space-y-2">
+                  <li>
+                    <button onClick={() => handleToolClick('split')} className="flex items-center gap-2 text-slate-700 hover:text-cyan-600 font-semibold text-[15px] transition cursor-pointer w-full text-left py-1.5">
+                      <Scissors className="w-5 h-5 text-cyan-500 shrink-0" />
+                      <span>Extract Pages</span>
+                    </button>
+                  </li>
+                  <li>
+                    <button onClick={() => handleToolClick('split')} className="flex items-center gap-2 text-slate-700 hover:text-cyan-600 font-semibold text-[15px] transition cursor-pointer w-full text-left py-1.5">
+                      <Scissors className="w-5 h-5 text-cyan-500 shrink-0" />
+                      <span>Split by pages</span>
+                    </button>
+                  </li>
+                  <li>
+                    <button onClick={() => handleToolClick('split')} className="flex items-center gap-2 text-slate-700 hover:text-cyan-600 font-semibold text-[15px] transition cursor-pointer w-full text-left py-1.5">
+                      <Scissors className="w-5 h-5 text-cyan-500 shrink-0" />
+                      <span>Split by bookmarks</span>
+                    </button>
+                  </li>
+                  <li>
+                    <button onClick={() => handleToolClick('split')} className="flex items-center gap-2 text-slate-700 hover:text-cyan-600 font-semibold text-[15px] transition cursor-pointer w-full text-left py-1.5">
+                      <Scissors className="w-5 h-5 text-cyan-500 shrink-0" />
+                      <span>Split in half</span>
+                    </button>
+                  </li>
+                  <li>
+                    <button onClick={() => handleToolClick('split')} className="flex items-center gap-2 text-slate-700 hover:text-cyan-600 font-semibold text-[15px] transition cursor-pointer w-full text-left py-1.5">
+                      <Scissors className="w-5 h-5 text-cyan-500 shrink-0" />
+                      <span>Split by size</span>
+                    </button>
+                  </li>
+                  <li>
+                    <button onClick={() => handleToolClick('split')} className="flex items-center gap-2 text-slate-700 hover:text-cyan-600 font-semibold text-[15px] transition cursor-pointer w-full text-left py-1.5">
+                      <Scissors className="w-5 h-5 text-cyan-500 shrink-0" />
+                      <span>Split by text</span>
+                    </button>
+                  </li>
+                </ul>
+              </div>
+
+              {/* Column 3: EDIT & SIGN, COMPRESS, SECURITY */}
+              <div>
+                <h4 className="text-xs sm:text-sm font-black uppercase tracking-wider text-slate-500 mb-3.5">
+                  EDIT & SIGN
+                </h4>
+                <ul className="space-y-2 mb-6">
+                  <li>
+                    <button onClick={() => handleToolClick('edit')} className="flex items-center gap-2 text-slate-700 hover:text-sky-600 font-semibold text-[15px] transition cursor-pointer w-full text-left py-1.5">
+                      <PenTool className="w-5 h-5 text-sky-500 shrink-0" />
+                      <span>Edit</span>
+                    </button>
+                  </li>
+                  <li>
+                    <button onClick={() => handleToolClick('fill-sign')} className="flex items-center gap-2 text-slate-700 hover:text-sky-600 font-semibold text-[15px] transition cursor-pointer w-full text-left py-1.5">
+                      <FileSignature className="w-5 h-5 text-sky-500 shrink-0" />
+                      <span>Fill & Sign</span>
+                    </button>
+                  </li>
+                  <li>
+                    <button onClick={() => handleToolClick('edit')} className="flex items-center gap-2 text-slate-700 hover:text-sky-600 font-semibold text-[15px] transition cursor-pointer w-full text-left py-1.5">
+                      <FileText className="w-5 h-5 text-sky-500 shrink-0" />
+                      <span>Create Forms</span>
+                    </button>
+                  </li>
+                  <li>
+                    <button onClick={() => handleToolClick('delete-pages')} className="flex items-center gap-2 text-slate-700 hover:text-sky-600 font-semibold text-[15px] transition cursor-pointer w-full text-left py-1.5">
+                      <Trash2 className="w-5 h-5 text-sky-500 shrink-0" />
+                      <span>Delete Pages</span>
+                    </button>
+                  </li>
+                </ul>
+
+                <h4 className="text-xs sm:text-sm font-black uppercase tracking-wider text-slate-500 mb-3.5">
+                  COMPRESS
+                </h4>
+                <ul className="space-y-2 mb-6">
+                  <li>
+                    <button onClick={() => handleToolClick('compress')} className="flex items-center gap-2 text-slate-700 hover:text-teal-600 font-semibold text-[15px] transition cursor-pointer w-full text-left py-1.5">
+                      <Minimize2 className="w-5 h-5 text-teal-500 shrink-0" />
+                      <span>Compress</span>
+                    </button>
+                  </li>
+                </ul>
+
+                <h4 className="text-xs sm:text-sm font-black uppercase tracking-wider text-slate-500 mb-3.5">
+                  SECURITY
+                </h4>
+                <ul className="space-y-2">
+                  <li>
+                    <button onClick={() => handleToolClick('protect')} className="flex items-center gap-2 text-slate-700 hover:text-teal-600 font-semibold text-[15px] transition cursor-pointer w-full text-left py-1.5">
+                      <Lock className="w-5 h-5 text-teal-500 shrink-0" />
+                      <span>Protect</span>
+                    </button>
+                  </li>
+                  <li>
+                    <button onClick={() => handleToolClick('unlock')} className="flex items-center gap-2 text-slate-700 hover:text-teal-600 font-semibold text-[15px] transition cursor-pointer w-full text-left py-1.5">
+                      <Unlock className="w-5 h-5 text-teal-500 shrink-0" />
+                      <span>Unlock</span>
+                    </button>
+                  </li>
+                  <li>
+                    <button onClick={() => handleToolClick('watermark')} className="flex items-center gap-2 text-slate-700 hover:text-teal-600 font-semibold text-[15px] transition cursor-pointer w-full text-left py-1.5">
+                      <Stamp className="w-5 h-5 text-teal-500 shrink-0" />
+                      <span>Watermark</span>
+                    </button>
+                  </li>
+                  <li>
+                    <button onClick={() => handleToolClick('flatten')} className="flex items-center gap-2 text-slate-700 hover:text-teal-600 font-semibold text-[15px] transition cursor-pointer w-full text-left py-1.5">
+                      <span className="font-serif font-black text-sm text-teal-500 w-4 text-center">A</span>
+                      <span>Flatten</span>
+                    </button>
+                  </li>
+                </ul>
+              </div>
+
+              {/* Column 4: CONVERT FROM PDF & CONVERT TO PDF */}
+              <div>
+                <h4 className="text-xs sm:text-sm font-black uppercase tracking-wider text-slate-500 mb-3.5">
+                  CONVERT FROM PDF
+                </h4>
+                <ul className="space-y-2 mb-6">
+                  <li>
+                    <button onClick={() => handleToolClick('pdf-to-text')} className="flex items-center gap-2 text-slate-700 hover:text-orange-600 font-semibold text-[15px] transition cursor-pointer w-full text-left py-1.5">
+                      <Table className="w-5 h-5 text-orange-500 shrink-0" />
+                      <span>PDF to Excel</span>
+                    </button>
+                  </li>
+                  <li>
+                    <button onClick={() => handleToolClick('pdf-to-images')} className="flex items-center gap-2 text-slate-700 hover:text-orange-600 font-semibold text-[15px] transition cursor-pointer w-full text-left py-1.5">
+                      <ImageIcon className="w-5 h-5 text-orange-500 shrink-0" />
+                      <span>PDF to JPG</span>
+                    </button>
+                  </li>
+                  <li>
+                    <button onClick={() => handleToolClick('pdf-to-images')} className="flex items-center gap-2 text-slate-700 hover:text-orange-600 font-semibold text-[15px] transition cursor-pointer w-full text-left py-1.5">
+                      <Presentation className="w-5 h-5 text-orange-500 shrink-0" />
+                      <span>PDF to PowerPoint</span>
+                    </button>
+                  </li>
+                  <li>
+                    <button onClick={() => handleToolClick('pdf-to-text')} className="flex items-center gap-2 text-slate-700 hover:text-orange-600 font-semibold text-[15px] transition cursor-pointer w-full text-left py-1.5">
+                      <FileText className="w-5 h-5 text-orange-500 shrink-0" />
+                      <span>PDF to Text</span>
+                    </button>
+                  </li>
+                  <li>
+                    <button onClick={() => handleToolClick('pdf-to-text')} className="flex items-center gap-2 text-slate-700 hover:text-orange-600 font-semibold text-[15px] transition cursor-pointer w-full text-left py-1.5">
+                      <FileText className="w-5 h-5 text-orange-500 shrink-0" />
+                      <span>PDF to Word</span>
+                    </button>
+                  </li>
+                </ul>
+
+                <h4 className="text-xs sm:text-sm font-black uppercase tracking-wider text-slate-500 mb-3.5">
+                  CONVERT TO PDF
+                </h4>
+                <ul className="space-y-2">
+                  <li>
+                    <button onClick={() => handleToolClick('images-to-pdf')} className="flex items-center gap-2 text-slate-700 hover:text-purple-600 font-semibold text-[15px] transition cursor-pointer w-full text-left py-1.5">
+                      <FileCode className="w-5 h-5 text-purple-500 shrink-0" />
+                      <span>HTML to PDF</span>
+                    </button>
+                  </li>
+                  <li>
+                    <button onClick={() => handleToolClick('images-to-pdf')} className="flex items-center gap-2 text-slate-700 hover:text-purple-600 font-semibold text-[15px] transition cursor-pointer w-full text-left py-1.5">
+                      <ImageIcon className="w-5 h-5 text-purple-500 shrink-0" />
+                      <span>JPG to PDF</span>
+                    </button>
+                  </li>
+                  <li>
+                    <button onClick={() => handleToolClick('edit')} className="flex items-center gap-2 text-slate-700 hover:text-purple-600 font-semibold text-[15px] transition cursor-pointer w-full text-left py-1.5">
+                      <FileText className="w-5 h-5 text-purple-500 shrink-0" />
+                      <span>Word to PDF</span>
+                    </button>
+                  </li>
+                </ul>
+              </div>
+
+              {/* Column 5: OTHER */}
+              <div>
+                <h4 className="text-xs sm:text-sm font-black uppercase tracking-wider text-slate-500 mb-3.5">
+                  OTHER
+                </h4>
+                <ul className="space-y-2">
+                  <li>
+                    <button onClick={() => handleToolClick('bates-numbering')} className="flex items-center gap-2 text-slate-700 hover:text-pink-600 font-semibold text-[15px] transition cursor-pointer w-full text-left py-1.5">
+                      <Binary className="w-5 h-5 text-pink-500 shrink-0" />
+                      <span>Bates Numbering</span>
+                    </button>
+                  </li>
+                  <li>
+                    <button onClick={() => handleToolClick('edit')} className="flex items-center gap-2 text-slate-700 hover:text-pink-600 font-semibold text-[15px] transition cursor-pointer w-full text-left py-1.5">
+                      <FileText className="w-5 h-5 text-pink-500 shrink-0" />
+                      <span>Create Bookmarks</span>
+                    </button>
+                  </li>
+                  <li>
+                    <button onClick={() => handleToolClick('crop')} className="flex items-center gap-2 text-slate-700 hover:text-pink-600 font-semibold text-[15px] transition cursor-pointer w-full text-left py-1.5">
+                      <Crop className="w-5 h-5 text-pink-500 shrink-0" />
+                      <span>Crop</span>
+                    </button>
+                  </li>
+                  <li>
+                    <button onClick={() => handleToolClick('metadata')} className="flex items-center gap-2 text-slate-700 hover:text-pink-600 font-semibold text-[15px] transition cursor-pointer w-full text-left py-1.5">
+                      <FileText className="w-5 h-5 text-pink-500 shrink-0" />
+                      <span>Edit Metadata</span>
+                    </button>
+                  </li>
+                  <li>
+                    <button onClick={() => handleToolClick('pdf-to-images')} className="flex items-center gap-2 text-slate-700 hover:text-pink-600 font-semibold text-[15px] transition cursor-pointer w-full text-left py-1.5">
+                      <ImageIcon className="w-5 h-5 text-pink-500 shrink-0" />
+                      <span>Extract Images</span>
+                    </button>
+                  </li>
+                  <li>
+                    <button onClick={() => handleToolClick('rotate')} className="flex items-center justify-between text-slate-700 hover:text-pink-600 font-semibold text-[15px] transition cursor-pointer w-full text-left py-1.5">
+                      <div className="flex items-center gap-2">
+                        <RotateCw className="w-5 h-5 text-pink-500 shrink-0" />
+                        <span>Flip</span>
+                      </div>
+                      <span className="text-[10px] font-bold px-1 rounded bg-cyan-100 text-cyan-800">New</span>
+                    </button>
+                  </li>
+                  <li>
+                    <button onClick={() => handleToolClick('grayscale')} className="flex items-center gap-2 text-slate-700 hover:text-pink-600 font-semibold text-[15px] transition cursor-pointer w-full text-left py-1.5">
+                      <Contrast className="w-5 h-5 text-pink-500 shrink-0" />
+                      <span>Grayscale</span>
+                    </button>
+                  </li>
+                  <li>
+                    <button onClick={() => handleToolClick('header-footer')} className="flex items-center gap-2 text-slate-700 hover:text-pink-600 font-semibold text-[15px] transition cursor-pointer w-full text-left py-1.5">
+                      <AlignVerticalDistributeCenter className="w-5 h-5 text-pink-500 shrink-0" />
+                      <span>Header & Footer</span>
+                    </button>
+                  </li>
+                  <li>
+                    <button onClick={() => handleToolClick('page-numbers')} className="flex items-center gap-2 text-slate-700 hover:text-pink-600 font-semibold text-[15px] transition cursor-pointer w-full text-left py-1.5">
+                      <Hash className="w-5 h-5 text-pink-500 shrink-0" />
+                      <span>N-up</span>
+                    </button>
+                  </li>
+                  <li>
+                    <button onClick={() => handleToolClick('page-numbers')} className="flex items-center gap-2 text-slate-700 hover:text-pink-600 font-semibold text-[15px] transition cursor-pointer w-full text-left py-1.5">
+                      <Hash className="w-5 h-5 text-pink-500 shrink-0" />
+                      <span>Page Numbers</span>
+                    </button>
+                  </li>
+                  <li>
+                    <button onClick={() => handleToolClick('metadata')} className="flex items-center gap-2 text-slate-700 hover:text-pink-600 font-semibold text-[15px] transition cursor-pointer w-full text-left py-1.5">
+                      <FileText className="w-5 h-5 text-pink-500 shrink-0" />
+                      <span>Rename</span>
+                    </button>
+                  </li>
+                  <li>
+                    <button onClick={() => handleToolClick('compress')} className="flex items-center gap-2 text-slate-700 hover:text-pink-600 font-semibold text-[15px] transition cursor-pointer w-full text-left py-1.5">
+                      <Minimize2 className="w-5 h-5 text-pink-500 shrink-0" />
+                      <span>Repair</span>
+                    </button>
+                  </li>
+                  <li>
+                    <button onClick={() => handleToolClick('resize')} className="flex items-center gap-2 text-slate-700 hover:text-pink-600 font-semibold text-[15px] transition cursor-pointer w-full text-left py-1.5">
+                      <Maximize className="w-5 h-5 text-pink-500 shrink-0" />
+                      <span>Resize</span>
+                    </button>
+                  </li>
+                  <li>
+                    <button onClick={() => handleToolClick('rotate')} className="flex items-center gap-2 text-slate-700 hover:text-pink-600 font-semibold text-[15px] transition cursor-pointer w-full text-left py-1.5">
+                      <RotateCw className="w-5 h-5 text-pink-500 shrink-0" />
+                      <span>Rotate</span>
+                    </button>
+                  </li>
+                  <li>
+                    <button onClick={() => handleToolClick('edit')} className="flex items-center justify-between text-slate-700 hover:text-pink-600 font-semibold text-[15px] transition cursor-pointer w-full text-left py-1.5">
+                      <div className="flex items-center gap-2">
+                        <Eraser className="w-5 h-5 text-pink-500 shrink-0" />
+                        <span>Remove annotations</span>
+                      </div>
+                      <span className="text-[10px] font-bold px-1 rounded bg-cyan-100 text-cyan-800">New</span>
+                    </button>
+                  </li>
+                </ul>
+              </div>
+
+              {/* Column 6: SCANS & AUTOMATE */}
+              <div>
+                <h4 className="text-xs sm:text-sm font-black uppercase tracking-wider text-slate-500 mb-3.5">
+                  SCANS
+                </h4>
+                <ul className="space-y-2 mb-6">
+                  <li>
+                    <button onClick={() => handleToolClick('rotate')} className="flex items-center gap-2 text-slate-700 hover:text-red-600 font-semibold text-[15px] transition cursor-pointer w-full text-left py-1.5">
+                      <RotateCw className="w-5 h-5 text-red-500 shrink-0" />
+                      <span>Deskew</span>
+                    </button>
+                  </li>
+                  <li>
+                    <button onClick={() => handleToolClick('ocr')} className="flex items-center gap-2 text-slate-700 hover:text-red-600 font-semibold text-[15px] transition cursor-pointer w-full text-left py-1.5">
+                      <ScanText className="w-5 h-5 text-red-500 shrink-0" />
+                      <span>OCR</span>
+                    </button>
+                  </li>
+                </ul>
+
+                <h4 className="text-xs sm:text-sm font-black uppercase tracking-wider text-slate-500 mb-3.5">
+                  AUTOMATE
+                </h4>
+                <ul className="space-y-2">
+                  <li>
+                    <button onClick={() => handleToolClick('edit')} className="flex items-center justify-between text-slate-700 hover:text-slate-900 font-semibold text-[15px] transition cursor-pointer w-full text-left py-1.5">
+                      <div className="flex items-center gap-2">
+                        <Bot className="w-5 h-5 text-slate-600 shrink-0" />
+                        <span>Workflows</span>
+                      </div>
+                      <span className="text-[10px] font-bold px-1 rounded bg-cyan-100 text-cyan-800">New</span>
+                    </button>
+                  </li>
+                </ul>
+              </div>
+
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* Pricing Modal */}
+      {showPricingModal && typeof document !== 'undefined' && createPortal(
+        <div 
+          onClick={(e) => { if (e.target === e.currentTarget) setShowPricingModal(false); }}
+          className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6 overflow-y-auto animate-in fade-in duration-150"
+        >
+          <div className="bg-white rounded-3xl max-w-xl w-full p-6 sm:p-8 shadow-2xl relative my-auto animate-in fade-in zoom-in-95 max-h-[92vh] overflow-y-auto custom-scrollbar border border-slate-100">
+            <button 
+              onClick={() => setShowPricingModal(false)} 
+              className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <div className="text-center mb-6">
+              <h3 className="text-2xl sm:text-3xl font-black text-slate-800 tracking-tight">EditEverything Pricing & Plans</h3>
+              <p className="text-sm text-slate-500 mt-1.5">Free for documents up to 200 pages or 50 MB and 3 tasks per hour.</p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="p-5 sm:p-6 rounded-2xl border-2 border-cyan-400 bg-cyan-50/40 text-center flex flex-col justify-between">
+                <div>
+                  <span className="text-xs font-bold text-cyan-700 uppercase tracking-wider px-2.5 py-0.5 bg-cyan-100 rounded-full">Free Web</span>
+                  <div className="text-3xl sm:text-4xl font-black text-slate-800 my-3">$0</div>
+                  <p className="text-xs sm:text-sm text-slate-600 mb-5 leading-relaxed">Unlimited free access to all 40+ client-side tools with complete privacy.</p>
+                </div>
+                <button 
+                  onClick={() => setShowPricingModal(false)} 
+                  className="w-full py-2.5 bg-gradient-to-r from-[#00bed6] to-[#0891b2] text-white font-bold text-xs sm:text-sm rounded-xl transition shadow-md shadow-cyan-500/20 active:scale-95 cursor-pointer"
+                >
+                  Current Plan
+                </button>
+              </div>
+
+              <div className="p-5 sm:p-6 rounded-2xl border border-slate-200 bg-slate-50/80 text-center flex flex-col justify-between">
+                <div>
+                  <span className="text-xs font-bold text-sky-700 uppercase tracking-wider px-2.5 py-0.5 bg-sky-100 rounded-full">Pro Desktop + Web</span>
+                  <div className="text-3xl sm:text-4xl font-black text-slate-800 my-3">$7.50<span className="text-xs text-slate-500 font-semibold">/mo</span></div>
+                  <p className="text-xs sm:text-sm text-slate-600 mb-5 leading-relaxed">Unlimited document size, batch tasks, and offline desktop access.</p>
+                </div>
+                <button 
+                  onClick={() => { alert('Pro subscription activated!'); setShowPricingModal(false); }} 
+                  className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs sm:text-sm rounded-xl transition shadow-md active:scale-95 cursor-pointer"
+                >
+                  Upgrade
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Desktop Modal */}
+      {showDesktopModal && typeof document !== 'undefined' && createPortal(
+        <div 
+          onClick={(e) => { if (e.target === e.currentTarget) setShowDesktopModal(false); }}
+          className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6 overflow-y-auto animate-in fade-in duration-150"
+        >
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl relative my-auto animate-in fade-in zoom-in-95 text-center max-h-[92vh] overflow-y-auto custom-scrollbar border border-slate-100">
+            <button 
+              onClick={() => setShowDesktopModal(false)} 
+              className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#00e5ff] via-[#00bed6] to-[#0891b2] text-white font-black text-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-cyan-500/25">
+              EE
+            </div>
+            <h3 className="text-2xl font-black text-slate-800 mb-2">EditEverything Desktop</h3>
+            <p className="text-sm text-slate-600 mb-6 leading-relaxed">
+              Same features as the online service, and the files never leave your computer. Use all your locally installed fonts.
+            </p>
+            <div className="space-y-3">
+              <button 
+                onClick={() => { alert('Downloading EditEverything Desktop for Windows (64-bit)...'); setShowDesktopModal(false); }} 
+                className="w-full py-3.5 bg-gradient-to-r from-[#00bed6] to-[#0891b2] hover:from-[#00abc1] hover:to-[#0e7490] text-white font-bold text-sm sm:text-base rounded-xl transition shadow-md shadow-cyan-500/25 active:scale-95 cursor-pointer"
+              >
+                Download for Windows (64-bit)
+              </button>
+              <button 
+                onClick={() => { alert('Downloading EditEverything Desktop for macOS (Apple Silicon & Intel)...'); setShowDesktopModal(false); }} 
+                className="w-full py-3 bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold text-xs sm:text-sm rounded-xl transition active:scale-95 cursor-pointer"
+              >
+                Download for macOS (Apple Silicon & Intel)
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Login Modal */}
+      {showLoginModal && typeof document !== 'undefined' && createPortal(
+        <div 
+          onClick={(e) => { if (e.target === e.currentTarget) setShowLoginModal(false); }}
+          className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6 overflow-y-auto animate-in fade-in duration-150"
+        >
+          <div className="bg-white rounded-3xl max-w-sm w-full p-6 sm:p-8 shadow-2xl relative my-auto animate-in fade-in zoom-in-95 text-center max-h-[92vh] overflow-y-auto custom-scrollbar border border-slate-100">
+            <button 
+              onClick={() => setShowLoginModal(false)} 
+              className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <h3 className="text-2xl font-black text-slate-800 mb-1">Log in to EditEverything</h3>
+            <p className="text-xs text-slate-500 mb-6">Access your saved templates and preferences.</p>
+            <input type="email" placeholder="Your email address" className="w-full px-3.5 py-2.5 text-sm border border-slate-200 rounded-xl mb-3 outline-none focus:ring-2 focus:ring-[#00bed6]" />
+            <input type="password" placeholder="Password" className="w-full px-3.5 py-2.5 text-sm border border-slate-200 rounded-xl mb-4 outline-none focus:ring-2 focus:ring-[#00bed6]" />
+            <button 
+              onClick={() => { alert('Logged in successfully!'); setShowLoginModal(false); }} 
+              className="w-full py-3 bg-gradient-to-r from-[#00bed6] to-[#0891b2] hover:from-[#00abc1] hover:to-[#0e7490] text-white font-bold text-sm rounded-xl transition shadow-md shadow-cyan-500/25 active:scale-95 cursor-pointer"
+            >
+              Log in
+            </button>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Languages Modal */}
+      {showLangModal && typeof document !== 'undefined' && createPortal(
+        <div 
+          onClick={(e) => { if (e.target === e.currentTarget) setShowLangModal(false); }}
+          className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6 overflow-y-auto animate-in fade-in duration-150"
+        >
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl relative my-auto animate-in fade-in zoom-in-95 max-h-[85vh] flex flex-col border border-slate-100">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+              <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                <Globe className="w-5 h-5 text-cyan-600" />
+                Select Language
+              </h3>
+              <button 
+                onClick={() => setShowLangModal(false)} 
+                className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 overflow-y-auto custom-scrollbar pr-1">
+              {LANGUAGES.map((lang) => (
+                <button
+                  key={lang}
+                  onClick={() => {
+                    setSelectedLang(lang);
+                    setShowLangModal(false);
+                  }}
+                  className={`text-left px-3 py-2 rounded-xl text-xs sm:text-sm font-medium transition cursor-pointer flex items-center justify-between ${
+                    selectedLang === lang ? 'bg-cyan-50 text-cyan-700 font-bold' : 'hover:bg-slate-50 text-slate-700'
+                  }`}
+                >
+                  <span>{lang}</span>
+                  {selectedLang === lang && <Check className="w-4 h-4 text-cyan-600" />}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+    </header>
+  );
+};

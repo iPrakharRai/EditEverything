@@ -1,0 +1,28 @@
+# ==============================================================================
+# EditEverything - Python Document & Image Processing Requirements
+# Optional Python utilities for offline batch processing, OCR automation, & testing
+# ==============================================================================
+
+# Core Image Processing & Manipulation
+Pillow>=10.0.0
+
+# Optical Character Recognition (OCR) Engine Interface
+pytesseract>=0.3.10
+
+# Computer Vision & Image Pre-processing for Enhanced OCR
+opencv-python-headless>=4.8.0
+
+# PDF Reading, Writing, Merging, and Manipulation
+pypdf>=3.17.0
+
+# PDF Generation and Drawing Toolkit
+reportlab>=4.0.0
+
+# High-Resolution PDF to Image Rasterization (requires poppler)
+pdf2image>=1.16.3
+
+# Terminal Progress Bars & CLI Utilities
+tqdm>=4.66.0
+
+# HTTP Networking for Asset Fetching
+requests>=2.31.0
