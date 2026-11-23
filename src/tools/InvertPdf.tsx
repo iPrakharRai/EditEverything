@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Contrast, 
   ArrowLeft, 
@@ -6,17 +6,24 @@ import {
   Sparkles, 
   Check, 
   Sun, 
-  Moon, 
   Sliders, 
   FileText, 
   RefreshCw,
   Printer,
   Eye,
-  FileCheck2
+  FileCheck2,
+  Image as ImageIcon
 } from 'lucide-react';
 import * as pdfjsLib from 'pdfjs-dist';
 import { FileDropzone } from '../components/FileDropzone';
-import { invertPdfBackground, downloadBlob } from '../utils/pdfProcessor';
+import { 
+  invertPdfBackground, 
+  invertImageFile, 
+  detectPageImageBoxes, 
+  processCanvasPixels, 
+  downloadBlob,
+  ImageBoundingBox
+} from '../utils/pdfProcessor';
 import { generateSamplePdfBytesAsync } from '../utils/samplePdfs';
 import { useLanguage } from '../i18n/LanguageContext';
 
@@ -28,14 +35,21 @@ interface InvertPdfProps {
 export const InvertPdf: React.FC<InvertPdfProps> = ({ onBack, initialFile }) => {
   const { t } = useLanguage();
   const [file, setFile] = useState<{ name: string; bytes: Uint8Array } | null>(initialFile || null);
-  const [mode, setMode] = useState<'smart-clean' | 'full-invert' | 'monochrome'>('smart-clean');
+  const [mode, setMode] = useState<'smart-clean' | 'text-only' | 'monochrome' | 'full-invert'>('smart-clean');
   const [threshold, setThreshold] = useState<number>(125);
+  const [preserveImages, setPreserveImages] = useState<boolean>(true);
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState<{ current: number; total: number } | null>(null);
   const [previewOriginal, setPreviewOriginal] = useState<string>('');
   const [previewCleaned, setPreviewCleaned] = useState<string>('');
   const [totalPages, setTotalPages] = useState<number>(1);
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
+
+  const isImageFile = Boolean(
+    file && 
+    !file.name.toLowerCase().endsWith('.pdf') && 
+    (file.name.match(/\.(png|jpe?g|webp|bmp|gif)$/i) !== null)
+  );
 
   // Synchronize when initialFile arrives
   useEffect(() => {
@@ -52,96 +66,114 @@ export const InvertPdf: React.FC<InvertPdfProps> = ({ onBack, initialFile }) => 
     const generatePreview = async () => {
       try {
         setIsPreviewLoading(true);
-        const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(file.bytes.slice(0)) });
-        const doc = await loadingTask.promise;
-        if (!isMounted) return;
-        setTotalPages(doc.numPages || 1);
 
-        const page = await doc.getPage(1);
-        const viewport = page.getViewport({ scale: 1.5 });
+        if (isImageFile) {
+          // Handle Image file input
+          setTotalPages(1);
+          const mimeType = file.name.endsWith('.png') ? 'image/png' : 'image/jpeg';
+          const blob = new Blob([file.bytes as unknown as BlobPart], { type: mimeType });
+          const url = URL.createObjectURL(blob);
+          const img = new Image();
 
-        // 1. Render Original Page
-        const origCanvas = document.createElement('canvas');
-        origCanvas.width = Math.floor(viewport.width);
-        origCanvas.height = Math.floor(viewport.height);
-        const origCtx = origCanvas.getContext('2d');
-        if (!origCtx) return;
+          await new Promise<void>((resolve, reject) => {
+            img.onload = () => resolve();
+            img.onerror = reject;
+            img.src = url;
+          });
 
-        await page.render({ canvasContext: origCtx, viewport }).promise;
-        if (!isMounted) return;
-        setPreviewOriginal(origCanvas.toDataURL('image/png'));
-
-        // 2. Generate Cleaned Page
-        const cleanCanvas = document.createElement('canvas');
-        cleanCanvas.width = origCanvas.width;
-        cleanCanvas.height = origCanvas.height;
-        const cleanCtx = cleanCanvas.getContext('2d');
-        if (!cleanCtx) return;
-
-        cleanCtx.drawImage(origCanvas, 0, 0);
-        const imgData = cleanCtx.getImageData(0, 0, cleanCanvas.width, cleanCanvas.height);
-        const d = imgData.data;
-
-        for (let p = 0; p < d.length; p += 4) {
-          const r = d[p];
-          const g = d[p + 1];
-          const b = d[p + 2];
-          const a = d[p + 3];
-
-          if (a < 10) {
-            d[p] = 255;
-            d[p + 1] = 255;
-            d[p + 2] = 255;
-            d[p + 3] = 255;
-            continue;
+          if (!isMounted) {
+            URL.revokeObjectURL(url);
+            return;
           }
 
-          const lum = 0.299 * r + 0.587 * g + 0.114 * b;
-
-          if (mode === 'full-invert') {
-            d[p] = 255 - r;
-            d[p + 1] = 255 - g;
-            d[p + 2] = 255 - b;
-          } else if (mode === 'monochrome') {
-            if (lum < threshold) {
-              d[p] = 255;
-              d[p + 1] = 255;
-              d[p + 2] = 255;
-            } else {
-              d[p] = 0;
-              d[p + 1] = 0;
-              d[p + 2] = 0;
-            }
-          } else {
-            // smart-clean
-            if (lum < threshold) {
-              // Dark background -> Clean pure white
-              d[p] = 255;
-              d[p + 1] = 255;
-              d[p + 2] = 255;
-            } else {
-              const maxC = Math.max(r, g, b);
-              const minC = Math.min(r, g, b);
-              const isColor = (maxC - minC) > 35;
-
-              if (isColor) {
-                const factor = lum > 160 ? 0.65 : 0.85;
-                d[p] = Math.round(r * factor);
-                d[p + 1] = Math.round(g * factor);
-                d[p + 2] = Math.round(b * factor);
-              } else {
-                const darkVal = Math.min(50, Math.max(0, 255 - lum));
-                d[p] = darkVal;
-                d[p + 1] = darkVal;
-                d[p + 2] = darkVal;
-              }
-            }
+          // Scale for preview if very large
+          const maxDim = 1200;
+          let w = img.naturalWidth;
+          let h = img.naturalHeight;
+          if (w > maxDim || h > maxDim) {
+            const scale = Math.min(maxDim / w, maxDim / h);
+            w = Math.round(w * scale);
+            h = Math.round(h * scale);
           }
-        }
 
-        cleanCtx.putImageData(imgData, 0, 0);
-        if (isMounted) {
-          setPreviewCleaned(cleanCanvas.toDataURL('image/png'));
+          const origCanvas = document.createElement('canvas');
+          origCanvas.width = w;
+          origCanvas.height = h;
+          const origCtx = origCanvas.getContext('2d');
+          if (!origCtx) return;
+          origCtx.drawImage(img, 0, 0, w, h);
+          URL.revokeObjectURL(url);
+
+          if (!isMounted) return;
+          setPreviewOriginal(origCanvas.toDataURL('image/png'));
+
+          const cleanCanvas = document.createElement('canvas');
+          cleanCanvas.width = w;
+          cleanCanvas.height = h;
+          const cleanCtx = cleanCanvas.getContext('2d');
+          if (!cleanCtx) return;
+
+          cleanCtx.drawImage(origCanvas, 0, 0);
+          const imgData = cleanCtx.getImageData(0, 0, w, h);
+          const origData = origCtx.getImageData(0, 0, w, h);
+
+          processCanvasPixels(imgData.data, origData.data, w, h, {
+            mode,
+            threshold,
+            preserveImages,
+            imageBoxes: []
+          });
+
+          cleanCtx.putImageData(imgData, 0, 0);
+          if (isMounted) {
+            setPreviewCleaned(cleanCanvas.toDataURL('image/png'));
+          }
+        } else {
+          // Handle PDF input
+          const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(file.bytes.slice(0)) });
+          const doc = await loadingTask.promise;
+          if (!isMounted) return;
+          setTotalPages(doc.numPages || 1);
+
+          const page = await doc.getPage(1);
+          const viewport = page.getViewport({ scale: 1.5 });
+
+          // 1. Render Original Page
+          const origCanvas = document.createElement('canvas');
+          origCanvas.width = Math.floor(viewport.width);
+          origCanvas.height = Math.floor(viewport.height);
+          const origCtx = origCanvas.getContext('2d');
+          if (!origCtx) return;
+
+          // Detect image bounding boxes from PDF operator stream
+          const imageBoxes: ImageBoundingBox[] = await detectPageImageBoxes(page, viewport);
+
+          await page.render({ canvasContext: origCtx, viewport }).promise;
+          if (!isMounted) return;
+          setPreviewOriginal(origCanvas.toDataURL('image/png'));
+
+          // 2. Generate Cleaned Page
+          const cleanCanvas = document.createElement('canvas');
+          cleanCanvas.width = origCanvas.width;
+          cleanCanvas.height = origCanvas.height;
+          const cleanCtx = cleanCanvas.getContext('2d');
+          if (!cleanCtx) return;
+
+          cleanCtx.drawImage(origCanvas, 0, 0);
+          const imgData = cleanCtx.getImageData(0, 0, cleanCanvas.width, cleanCanvas.height);
+          const origData = origCtx.getImageData(0, 0, origCanvas.width, origCanvas.height);
+
+          processCanvasPixels(imgData.data, origData.data, cleanCanvas.width, cleanCanvas.height, {
+            mode,
+            threshold,
+            preserveImages,
+            imageBoxes
+          });
+
+          cleanCtx.putImageData(imgData, 0, 0);
+          if (isMounted) {
+            setPreviewCleaned(cleanCanvas.toDataURL('image/png'));
+          }
         }
       } catch (err) {
         console.error('Error generating preview:', err);
@@ -157,29 +189,62 @@ export const InvertPdf: React.FC<InvertPdfProps> = ({ onBack, initialFile }) => 
     return () => {
       isMounted = false;
     };
-  }, [file, mode, threshold]);
+  }, [file, mode, threshold, preserveImages]);
 
-  const handleProcessAndDownload = async () => {
+  const handleProcessAndDownloadPdf = async () => {
     if (!file) return;
 
     try {
       setIsProcessing(true);
       setProgress({ current: 0, total: totalPages });
 
-      const cleanedBytes = await invertPdfBackground(
-        file.bytes,
-        { mode, threshold, dpiScale: 2.0 },
-        (current, total) => setProgress({ current, total })
-      );
-
       const baseName = file.name.replace(/\.[^/.]+$/, '');
-      downloadBlob(cleanedBytes, `${baseName}_white_background.pdf`);
+
+      if (isImageFile) {
+        const mimeType = file.name.endsWith('.png') ? 'image/png' : 'image/jpeg';
+        const res = await invertImageFile(file.bytes, mimeType, {
+          mode,
+          threshold,
+          preserveImages
+        });
+        downloadBlob(res.pdfBytes, `${baseName}_white_background.pdf`);
+      } else {
+        const cleanedBytes = await invertPdfBackground(
+          file.bytes,
+          { mode, threshold, dpiScale: 2.0, preserveImages },
+          (current, total) => setProgress({ current, total })
+        );
+        downloadBlob(cleanedBytes, `${baseName}_white_background.pdf`);
+      }
     } catch (err) {
       console.error('Error cleaning background:', err);
       alert('Error processing document. Please check the file and try again.');
     } finally {
       setIsProcessing(false);
       setProgress(null);
+    }
+  };
+
+  const handleProcessAndDownloadImage = async () => {
+    if (!file || !isImageFile) return;
+
+    try {
+      setIsProcessing(true);
+      const baseName = file.name.replace(/\.[^/.]+$/, '');
+      const mimeType = file.name.endsWith('.png') ? 'image/png' : 'image/jpeg';
+
+      const res = await invertImageFile(file.bytes, mimeType, {
+        mode,
+        threshold,
+        preserveImages
+      });
+
+      downloadBlob(res.imageBlob, `${baseName}_cleaned.png`, 'image/png');
+    } catch (err) {
+      console.error('Error cleaning image:', err);
+      alert('Error processing image. Please try again.');
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -213,7 +278,7 @@ export const InvertPdf: React.FC<InvertPdfProps> = ({ onBack, initialFile }) => 
               {t('invert.title', 'Invert & Clean Dark PDF')}
             </h2>
             <p className="text-base sm:text-xl text-slate-500 mt-2.5 font-medium max-w-2xl mx-auto">
-              {t('invert.subtitle', 'If your PDF has a black or dark background, clean it into pure white paper with crisp black text for easy reading and ink-saving printing.')}
+              {t('invert.subtitle', 'If your PDF has a black or dark background, clean it into pure white paper with crisp black text, while keeping photos and diagrams in full color.')}
             </p>
           </div>
 
@@ -222,7 +287,7 @@ export const InvertPdf: React.FC<InvertPdfProps> = ({ onBack, initialFile }) => 
             accept="application/pdf,image/*,.png,.jpg,.jpeg,.webp"
             title={t('invert.title', 'Upload Dark PDF or Image')}
             subtitle={t('invert.subtitle', 'Upload PDFs with dark background, black slides, or inverted scans. Files stay 100% private.')}
-            buttonText={t('invert.downloadBtn', 'Choose Dark PDF to Clean')}
+            buttonText={t('invert.downloadBtn', 'Choose Dark PDF or Image to Clean')}
           />
 
           {/* Quick Demo Sample Bar */}
@@ -231,7 +296,7 @@ export const InvertPdf: React.FC<InvertPdfProps> = ({ onBack, initialFile }) => 
               onClick={handleLoadSampleDarkModePdf}
               className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-white hover:bg-cyan-50 text-cyan-800 border-2 border-cyan-300 font-bold text-sm shadow-sm transition active:scale-95 cursor-pointer"
             >
-              <Moon className="w-4 h-4 text-slate-700" />
+              <Contrast className="w-4 h-4 text-slate-700" />
               <span>{t('invert.demoBtn', 'Test with Sample Dark Mode PDF (Black Background)')}</span>
               <span className="text-[10px] bg-cyan-600 text-white px-2 py-0.5 rounded-full font-black">DEMO</span>
             </button>
@@ -260,13 +325,24 @@ export const InvertPdf: React.FC<InvertPdfProps> = ({ onBack, initialFile }) => 
               <span>{t('invert.title', 'Clean Dark Background to White')}</span>
             </h1>
             <p className="text-xs sm:text-sm text-slate-500 mt-1">
-              File: <strong className="text-slate-700">{file.name}</strong> • {totalPages} page{totalPages > 1 ? 's' : ''} • {(file.bytes.byteLength / 1024).toFixed(1)} KB
+              File: <strong className="text-slate-700">{file.name}</strong> • {isImageFile ? '1 image' : `${totalPages} page${totalPages > 1 ? 's' : ''}`} • {(file.bytes.byteLength / 1024).toFixed(1)} KB
             </p>
           </div>
 
           <div className="flex items-center gap-3">
+            {isImageFile && (
+              <button
+                onClick={handleProcessAndDownloadImage}
+                disabled={isProcessing}
+                className="px-6 py-3.5 bg-white hover:bg-slate-50 text-slate-700 border-2 border-slate-300 font-bold text-sm sm:text-base rounded-2xl shadow-sm flex items-center gap-2 transition active:scale-95 cursor-pointer disabled:opacity-50"
+              >
+                <ImageIcon className="w-5 h-5 text-cyan-600" />
+                <span>{t('invert.downloadImageBtn', 'Download Cleaned PNG')}</span>
+              </button>
+            )}
+
             <button
-              onClick={handleProcessAndDownload}
+              onClick={handleProcessAndDownloadPdf}
               disabled={isProcessing}
               className="px-8 py-3.5 bg-gradient-to-r from-[#00bed6] to-[#0891b2] hover:from-[#00abc1] hover:to-[#0e7490] text-white font-bold text-sm sm:text-base rounded-2xl shadow-lg shadow-cyan-500/25 flex items-center gap-2.5 transition active:scale-95 cursor-pointer disabled:opacity-50"
             >
@@ -289,7 +365,7 @@ export const InvertPdf: React.FC<InvertPdfProps> = ({ onBack, initialFile }) => 
 
         {/* Control Settings Bar */}
         <div className="bg-white rounded-3xl p-6 sm:p-8 shadow-sm border border-slate-200/90 mb-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             
             {/* Mode 1: Smart Clean Background */}
             <button
@@ -303,14 +379,14 @@ export const InvertPdf: React.FC<InvertPdfProps> = ({ onBack, initialFile }) => 
             >
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <span className="font-bold text-sm sm:text-base text-slate-800 flex items-center gap-2">
+                  <span className="font-bold text-sm text-slate-800 flex items-center gap-2">
                     <Sun className="w-4 h-4 text-cyan-600" />
                     {t('invert.smartClean', 'Smart Clean Background')}
                   </span>
                   {mode === 'smart-clean' && <Check className="w-4 h-4 text-cyan-600" />}
                 </div>
                 <p className="text-xs text-slate-500 leading-relaxed">
-                  {t('invert.smartCleanDesc', 'Cleans black background into white paper, inverts light text to dark, and preserves color diagrams.')}
+                  {t('invert.smartCleanDesc', 'Cleans black background into white paper, inverts light text to dark, and preserves attached photos in 100% natural color.')}
                 </p>
               </div>
               <span className="text-[10px] font-black text-cyan-800 bg-cyan-100 px-2 py-0.5 rounded-full w-fit mt-3">
@@ -318,7 +394,34 @@ export const InvertPdf: React.FC<InvertPdfProps> = ({ onBack, initialFile }) => 
               </span>
             </button>
 
-            {/* Mode 2: High-Contrast Monochrome */}
+            {/* Mode 2: Clean Background & Keep Text Only (Image 3 & 4) */}
+            <button
+              type="button"
+              onClick={() => setMode('text-only')}
+              className={`p-4 rounded-2xl text-left border-2 transition cursor-pointer flex flex-col justify-between ${
+                mode === 'text-only'
+                  ? 'border-cyan-500 bg-cyan-50/50 shadow-sm'
+                  : 'border-slate-200 hover:border-slate-300 bg-white'
+              }`}
+            >
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-bold text-sm text-slate-800 flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-cyan-600" />
+                    {t('invert.textOnly', 'Clean Background (Keep Text Only)')}
+                  </span>
+                  {mode === 'text-only' && <Check className="w-4 h-4 text-cyan-600" />}
+                </div>
+                <p className="text-xs text-slate-500 leading-relaxed">
+                  {t('invert.textOnlyDesc', 'Bleaches photo and colored backgrounds to white paper, turning all text into crisp bold black font. Saves maximum ink for lecture slides.')}
+                </p>
+              </div>
+              <span className="text-[10px] font-black text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full w-fit mt-3">
+                SLIDE INK-SAVER
+              </span>
+            </button>
+
+            {/* Mode 3: High-Contrast Laser Print */}
             <button
               type="button"
               onClick={() => setMode('monochrome')}
@@ -330,7 +433,7 @@ export const InvertPdf: React.FC<InvertPdfProps> = ({ onBack, initialFile }) => 
             >
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <span className="font-bold text-sm sm:text-base text-slate-800 flex items-center gap-2">
+                  <span className="font-bold text-sm text-slate-800 flex items-center gap-2">
                     <Printer className="w-4 h-4 text-slate-700" />
                     {t('invert.monochrome', 'High-Contrast Laser Print')}
                   </span>
@@ -345,7 +448,7 @@ export const InvertPdf: React.FC<InvertPdfProps> = ({ onBack, initialFile }) => 
               </span>
             </button>
 
-            {/* Mode 3: Photo Negative Invert */}
+            {/* Mode 4: Photo Negative Invert */}
             <button
               type="button"
               onClick={() => setMode('full-invert')}
@@ -357,7 +460,7 @@ export const InvertPdf: React.FC<InvertPdfProps> = ({ onBack, initialFile }) => 
             >
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <span className="font-bold text-sm sm:text-base text-slate-800 flex items-center gap-2">
+                  <span className="font-bold text-sm text-slate-800 flex items-center gap-2">
                     <Contrast className="w-4 h-4 text-slate-700" />
                     {t('invert.negative', 'Complete Negative Invert')}
                   </span>
@@ -374,8 +477,31 @@ export const InvertPdf: React.FC<InvertPdfProps> = ({ onBack, initialFile }) => 
 
           </div>
 
-          {/* Sensitivity / Darkness Threshold Slider */}
+          {/* Photo Preservation Checkbox Option */}
           <div className="mt-6 pt-6 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <label className="flex items-start sm:items-center gap-3 cursor-pointer select-none group">
+              <input
+                type="checkbox"
+                checked={preserveImages}
+                onChange={(e) => setPreserveImages(e.target.checked)}
+                className="w-5 h-5 rounded text-cyan-600 focus:ring-cyan-500 border-slate-300 mt-0.5 sm:mt-0 cursor-pointer accent-cyan-600"
+              />
+              <div>
+                <span className="font-bold text-sm text-slate-800 group-hover:text-cyan-700 transition flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-cyan-600" />
+                  {t('invert.preserveImages', 'Preserve Attached Photos & Images in Original Color')}
+                </span>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  {preserveImages 
+                    ? 'Embedded photos, illustrations, and figures remain in 100% natural true colors without inversion.'
+                    : 'All page elements including photos will be inverted.'}
+                </p>
+              </div>
+            </label>
+          </div>
+
+          {/* Sensitivity / Darkness Threshold Slider */}
+          <div className="mt-4 pt-4 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-slate-700">
               <Sliders className="w-4 h-4 text-cyan-600" />
               <span>{t('invert.threshold', 'Background Detection Threshold:')}</span>
@@ -408,7 +534,7 @@ export const InvertPdf: React.FC<InvertPdfProps> = ({ onBack, initialFile }) => 
               {isPreviewLoading && <RefreshCw className="w-4 h-4 text-cyan-600 animate-spin ml-2" />}
             </h3>
             <span className="text-xs text-slate-500 font-medium">
-              Real-time preview updates with your selected mode
+              Real-time preview updates with your selected mode and settings
             </span>
           </div>
 
@@ -419,7 +545,7 @@ export const InvertPdf: React.FC<InvertPdfProps> = ({ onBack, initialFile }) => 
               <div className="flex items-center justify-between mb-3 pb-2 border-b border-slate-100">
                 <span className="text-xs font-bold uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
                   <span className="w-2.5 h-2.5 rounded-full bg-slate-800 inline-block"></span>
-                  {t('invert.before', 'Before: Original Dark PDF')}
+                  {t('invert.before', 'Before: Original Dark File')}
                 </span>
                 <span className="text-[11px] text-slate-400 font-mono">Page 1</span>
               </div>
@@ -428,7 +554,7 @@ export const InvertPdf: React.FC<InvertPdfProps> = ({ onBack, initialFile }) => 
                 {previewOriginal ? (
                   <img 
                     src={previewOriginal} 
-                    alt="Original Dark PDF" 
+                    alt="Original Dark Document" 
                     className="w-full h-full object-contain select-none"
                   />
                 ) : (
@@ -456,7 +582,7 @@ export const InvertPdf: React.FC<InvertPdfProps> = ({ onBack, initialFile }) => 
                 {previewCleaned ? (
                   <img 
                     src={previewCleaned} 
-                    alt="Cleaned White Background PDF" 
+                    alt="Cleaned White Background Document" 
                     className="w-full h-full object-contain select-none"
                   />
                 ) : (
@@ -476,18 +602,33 @@ export const InvertPdf: React.FC<InvertPdfProps> = ({ onBack, initialFile }) => 
           <div className="flex items-center gap-3">
             <FileCheck2 className="w-6 h-6 text-cyan-600 shrink-0" />
             <p className="text-xs sm:text-sm text-slate-600">
-              {t('invert.pagesNotice', `All ${totalPages} pages will be converted to crisp white backgrounds with high print clarity.`)}
+              {isImageFile 
+                ? 'Your image will be converted into a crisp white document ready to save or print.'
+                : t('invert.pagesNotice', `All ${totalPages} pages will be converted to crisp white backgrounds with high print clarity.`)}
             </p>
           </div>
 
-          <button
-            onClick={handleProcessAndDownload}
-            disabled={isProcessing}
-            className="w-full sm:w-auto px-8 py-3.5 bg-gradient-to-r from-[#00bed6] to-[#0891b2] hover:from-[#00abc1] hover:to-[#0e7490] text-white font-bold text-sm sm:text-base rounded-xl shadow-md transition active:scale-95 cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
-          >
-            <Download className="w-4 h-4" />
-            <span>{isProcessing ? 'Processing...' : t('invert.downloadBtn', 'Download Cleaned PDF')}</span>
-          </button>
+          <div className="flex items-center gap-3 w-full sm:w-auto">
+            {isImageFile && (
+              <button
+                onClick={handleProcessAndDownloadImage}
+                disabled={isProcessing}
+                className="w-full sm:w-auto px-6 py-3.5 bg-white hover:bg-slate-50 text-slate-700 border-2 border-slate-300 font-bold text-sm sm:text-base rounded-xl shadow-sm transition active:scale-95 cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                <ImageIcon className="w-4 h-4 text-cyan-600" />
+                <span>{t('invert.downloadImageBtn', 'Download Cleaned PNG')}</span>
+              </button>
+            )}
+
+            <button
+              onClick={handleProcessAndDownloadPdf}
+              disabled={isProcessing}
+              className="w-full sm:w-auto px-8 py-3.5 bg-gradient-to-r from-[#00bed6] to-[#0891b2] hover:from-[#00abc1] hover:to-[#0e7490] text-white font-bold text-sm sm:text-base rounded-xl shadow-md transition active:scale-95 cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              <Download className="w-4 h-4" />
+              <span>{isProcessing ? 'Processing...' : t('invert.downloadBtn', 'Download Cleaned White PDF')}</span>
+            </button>
+          </div>
         </div>
 
       </div>

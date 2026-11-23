@@ -704,15 +704,343 @@ export function downloadBlob(data: Uint8Array | Blob, filename: string, mimeType
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
+export interface ImageBoundingBox {
+  minX: number;
+  minY: number;
+  maxX: number;
+  maxY: number;
+  width: number;
+  height: number;
+  isBackground: boolean;
+}
+
+export function multiplyTransform(m1: number[], m2: number[]): number[] {
+  const [a1, b1, c1, d1, e1, f1] = m1;
+  const [a2, b2, c2, d2, e2, f2] = m2;
+  return [
+    a1 * a2 + c1 * b2,
+    b1 * a2 + d1 * b2,
+    a1 * c2 + c1 * d2,
+    b1 * c2 + d1 * d2,
+    a1 * e2 + c1 * f2 + e1,
+    b1 * e2 + d1 * f2 + f1,
+  ];
+}
+
+export function applyTransform(m: number[], x: number, y: number): [number, number] {
+  return [m[0] * x + m[2] * y + m[4], m[1] * x + m[3] * y + m[5]];
+}
+
+export async function detectPageImageBoxes(
+  page: any,
+  viewport: any
+): Promise<ImageBoundingBox[]> {
+  try {
+    const opList = await page.getOperatorList();
+    if (!opList || !opList.fnArray) return [];
+
+    const OPS = (pdfjsLib as any).OPS || {};
+    const saveOp = OPS.save ?? 10;
+    const restoreOp = OPS.restore ?? 11;
+    const transformOp = OPS.transform ?? 12;
+
+    const imageOps = new Set<number>([
+      OPS.paintImageXObject ?? 85,
+      OPS.paintInlineImageXObject ?? 86,
+      OPS.paintImageMaskXObject ?? 83,
+      OPS.paintImageXObjectRepeat ?? 88,
+      OPS.paintImageMaskXObjectRepeat ?? 89,
+      OPS.paintImageMaskXObjectGroup ?? 84,
+      OPS.paintInlineImageXObjectGroup ?? 87,
+    ]);
+
+    const stack: number[][] = [];
+    let currentMatrix = [1, 0, 0, 1, 0, 0];
+    const boxes: ImageBoundingBox[] = [];
+
+    const canvasWidth = Math.floor(viewport.width);
+    const canvasHeight = Math.floor(viewport.height);
+    const pageArea = canvasWidth * canvasHeight;
+
+    for (let i = 0; i < opList.fnArray.length; i++) {
+      const fn = opList.fnArray[i];
+      const args = opList.argsArray[i];
+
+      if (fn === saveOp) {
+        stack.push([...currentMatrix]);
+      } else if (fn === restoreOp) {
+        currentMatrix = stack.pop() || [1, 0, 0, 1, 0, 0];
+      } else if (fn === transformOp && Array.isArray(args) && args.length >= 6) {
+        currentMatrix = multiplyTransform(currentMatrix, args);
+      } else if (imageOps.has(fn)) {
+        // PDF images map unit square [0,0] to [1,1]
+        const p0 = applyTransform(currentMatrix, 0, 0);
+        const p1 = applyTransform(currentMatrix, 1, 0);
+        const p2 = applyTransform(currentMatrix, 1, 1);
+        const p3 = applyTransform(currentMatrix, 0, 1);
+
+        const v0 = viewport.convertToViewportPoint(p0[0], p0[1]);
+        const v1 = viewport.convertToViewportPoint(p1[0], p1[1]);
+        const v2 = viewport.convertToViewportPoint(p2[0], p2[1]);
+        const v3 = viewport.convertToViewportPoint(p3[0], p3[1]);
+
+        const minX = Math.max(0, Math.floor(Math.min(v0[0], v1[0], v2[0], v3[0])));
+        const maxX = Math.min(canvasWidth, Math.ceil(Math.max(v0[0], v1[0], v2[0], v3[0])));
+        const minY = Math.max(0, Math.floor(Math.min(v0[1], v1[1], v2[1], v3[1])));
+        const maxY = Math.min(canvasHeight, Math.ceil(Math.max(v0[1], v1[1], v2[1], v3[1])));
+
+        const w = maxX - minX;
+        const h = maxY - minY;
+        if (w > 2 && h > 2) {
+          const boxArea = w * h;
+          // An image is considered a background if it covers >= 88% of the page
+          const isBackground = boxArea >= 0.88 * pageArea;
+          boxes.push({ minX, minY, maxX, maxY, width: w, height: h, isBackground });
+        }
+      }
+    }
+
+    return boxes;
+  } catch (err) {
+    console.warn('Could not inspect operator list for image boxes:', err);
+    return [];
+  }
+}
+
+export function detectRasterPhotoBoxes(
+  d: Uint8ClampedArray,
+  width: number,
+  height: number
+): ImageBoundingBox[] {
+  const tileSize = 24;
+  const cols = Math.floor(width / tileSize);
+  const rows = Math.floor(height / tileSize);
+  if (cols < 2 || rows < 2) return [];
+
+  const tileIsPhoto = new Uint8Array(cols * rows);
+  for (let ty = 0; ty < rows; ty++) {
+    for (let tx = 0; tx < cols; tx++) {
+      let colorCount = 0;
+      let midLumCount = 0;
+      const totalPixels = tileSize * tileSize;
+
+      for (let py = 0; py < tileSize; py++) {
+        const y = ty * tileSize + py;
+        const rowOff = y * width * 4;
+        for (let px = 0; px < tileSize; px++) {
+          const x = tx * tileSize + px;
+          const p = rowOff + x * 4;
+          const r = d[p], g = d[p + 1], b = d[p + 2];
+          const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+          const sat = Math.max(r, g, b) - Math.min(r, g, b);
+          if (sat > 25) colorCount++;
+          if (lum > 35 && lum < 225) midLumCount++;
+        }
+      }
+
+      if (colorCount > totalPixels * 0.18 || midLumCount > totalPixels * 0.40) {
+        tileIsPhoto[ty * cols + tx] = 1;
+      }
+    }
+  }
+
+  // Find connected components of photo tiles
+  const visited = new Uint8Array(cols * rows);
+  const boxes: ImageBoundingBox[] = [];
+  const pageArea = width * height;
+
+  for (let ty = 0; ty < rows; ty++) {
+    for (let tx = 0; tx < cols; tx++) {
+      const idx = ty * cols + tx;
+      if (tileIsPhoto[idx] === 1 && visited[idx] === 0) {
+        let minTileX = tx, maxTileX = tx, minTileY = ty, maxTileY = ty;
+        let count = 0;
+        const queue: [number, number][] = [[tx, ty]];
+        visited[idx] = 1;
+
+        while (queue.length > 0) {
+          const [cx, cy] = queue.pop()!;
+          count++;
+          if (cx < minTileX) minTileX = cx;
+          if (cx > maxTileX) maxTileX = cx;
+          if (cy < minTileY) minTileY = cy;
+          if (cy > maxTileY) maxTileY = cy;
+
+          const neighbors: [number, number][] = [
+            [cx + 1, cy], [cx - 1, cy], [cx, cy + 1], [cx, cy - 1]
+          ];
+          for (const [nx, ny] of neighbors) {
+            if (nx >= 0 && nx < cols && ny >= 0 && ny < rows) {
+              const nIdx = ny * cols + nx;
+              if (tileIsPhoto[nIdx] === 1 && visited[nIdx] === 0) {
+                visited[nIdx] = 1;
+                queue.push([nx, ny]);
+              }
+            }
+          }
+        }
+
+        const minX = minTileX * tileSize;
+        const minY = minTileY * tileSize;
+        const maxX = Math.min(width, (maxTileX + 1) * tileSize);
+        const maxY = Math.min(height, (maxTileY + 1) * tileSize);
+        const w = maxX - minX;
+        const h = maxY - minY;
+        const boxArea = w * h;
+
+        if (w >= 48 && h >= 48 && count >= 4) {
+          const isBackground = boxArea >= 0.88 * pageArea;
+          boxes.push({ minX, minY, maxX, maxY, width: w, height: h, isBackground });
+        }
+      }
+    }
+  }
+
+  return boxes;
+}
+
 export interface InvertPdfOptions {
-  mode: 'smart-clean' | 'full-invert' | 'monochrome';
+  mode: 'smart-clean' | 'text-only' | 'monochrome' | 'full-invert';
   threshold?: number; // 0-255, default 125
   dpiScale?: number;  // 1.5 - 2.5, default 2.0
+  preserveImages?: boolean; // default true
+}
+
+export function processCanvasPixels(
+  d: Uint8ClampedArray,
+  origD: Uint8ClampedArray,
+  canvasWidth: number,
+  canvasHeight: number,
+  options: {
+    mode: 'smart-clean' | 'text-only' | 'monochrome' | 'full-invert';
+    threshold: number;
+    preserveImages: boolean;
+    imageBoxes: ImageBoundingBox[];
+  }
+) {
+  const { mode, threshold, preserveImages, imageBoxes } = options;
+
+  let isImagePixel: Uint8Array | null = null;
+  if (preserveImages) {
+    let effectiveBoxes = imageBoxes.filter(b => !b.isBackground);
+    if (effectiveBoxes.length === 0) {
+      effectiveBoxes = detectRasterPhotoBoxes(origD, canvasWidth, canvasHeight).filter(b => !b.isBackground);
+    }
+    if (effectiveBoxes.length > 0) {
+      isImagePixel = new Uint8Array(canvasWidth * canvasHeight);
+      for (const box of effectiveBoxes) {
+        for (let y = box.minY; y < box.maxY; y++) {
+          const rowOff = y * canvasWidth;
+          for (let x = box.minX; x < box.maxX; x++) {
+            isImagePixel[rowOff + x] = 1;
+          }
+        }
+      }
+    }
+  }
+
+  for (let p = 0, pIdx = 0; p < d.length; p += 4, pIdx++) {
+    // If pixel is within an attached image and preserveImages is true, retain original pixel!
+    if (preserveImages && isImagePixel && isImagePixel[pIdx] === 1) {
+      d[p] = origD[p];
+      d[p + 1] = origD[p + 1];
+      d[p + 2] = origD[p + 2];
+      d[p + 3] = origD[p + 3];
+      continue;
+    }
+
+    const r = origD[p];
+    const g = origD[p + 1];
+    const b = origD[p + 2];
+    const a = origD[p + 3];
+
+    // Transparent pixel -> Pure white
+    if (a < 10) {
+      d[p] = 255;
+      d[p + 1] = 255;
+      d[p + 2] = 255;
+      d[p + 3] = 255;
+      continue;
+    }
+
+    const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+    const maxC = Math.max(r, g, b);
+    const minC = Math.min(r, g, b);
+    const isColor = (maxC - minC) > 35;
+
+    if (mode === 'full-invert') {
+      d[p] = 255 - r;
+      d[p + 1] = 255 - g;
+      d[p + 2] = 255 - b;
+    } else if (mode === 'monochrome') {
+      if (lum < threshold) {
+        d[p] = 255;
+        d[p + 1] = 255;
+        d[p + 2] = 255;
+      } else {
+        d[p] = 0;
+        d[p + 1] = 0;
+        d[p + 2] = 0;
+      }
+    } else if (mode === 'text-only') {
+      // Clean background & keep text only (Slide ink-saver)
+      const isWhiteText = lum > Math.min(threshold + 30, 175) && (maxC - minC) < 45;
+      const isDarkOutlineOrText = lum < 65 && !isColor;
+
+      if (isWhiteText || isDarkOutlineOrText) {
+        d[p] = 0;
+        d[p + 1] = 0;
+        d[p + 2] = 0;
+      } else {
+        if (lum > 110) {
+          d[p] = 255;
+          d[p + 1] = 255;
+          d[p + 2] = 255;
+        } else {
+          const bR = Math.min(255, Math.round(r * 1.7 + 75));
+          const bG = Math.min(255, Math.round(g * 1.7 + 75));
+          const bB = Math.min(255, Math.round(b * 1.7 + 75));
+          const bLum = 0.299 * bR + 0.587 * bG + 0.114 * bB;
+          if (bLum > 195) {
+            d[p] = 255;
+            d[p + 1] = 255;
+            d[p + 2] = 255;
+          } else {
+            d[p] = bR;
+            d[p + 1] = bG;
+            d[p + 2] = bB;
+          }
+        }
+      }
+    } else {
+      // smart-clean (Recommended)
+      if (lum < threshold) {
+        // Dark background -> Clean pure white paper
+        d[p] = 255;
+        d[p + 1] = 255;
+        d[p + 2] = 255;
+      } else {
+        // Light text or graphics on dark background
+        if (isColor) {
+          const factor = lum > 160 ? 0.65 : 0.85;
+          d[p] = Math.round(r * factor);
+          d[p + 1] = Math.round(g * factor);
+          d[p + 2] = Math.round(b * factor);
+        } else {
+          // Crisp dark text
+          const darkVal = Math.min(45, Math.max(0, 255 - lum));
+          d[p] = darkVal;
+          d[p + 1] = darkVal;
+          d[p + 2] = darkVal;
+        }
+      }
+    }
+  }
 }
 
 export async function invertPdfBackground(
   pdfBuffer: Uint8Array,
-  options: InvertPdfOptions = { mode: 'smart-clean', threshold: 125, dpiScale: 2.0 },
+  options: InvertPdfOptions = { mode: 'smart-clean', threshold: 125, dpiScale: 2.0, preserveImages: true },
   onProgress?: (current: number, total: number) => void
 ): Promise<Uint8Array> {
   const clonedBytes = new Uint8Array(pdfBuffer.slice(0));
@@ -724,6 +1052,7 @@ export async function invertPdfBackground(
   const dpiScale = options.dpiScale || 2.0;
   const threshold = options.threshold ?? 125;
   const mode = options.mode || 'smart-clean';
+  const preserveImages = options.preserveImages ?? true;
 
   for (let i = 1; i <= numPages; i++) {
     onProgress?.(i, numPages);
@@ -736,69 +1065,20 @@ export async function invertPdfBackground(
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
     if (!ctx) continue;
 
+    // Detect image bounding boxes from PDF operator stream
+    const imageBoxes = await detectPageImageBoxes(page, viewport);
+
     await page.render({ canvasContext: ctx, viewport }).promise;
 
     const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const d = imgData.data;
+    const origData = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
-    for (let p = 0; p < d.length; p += 4) {
-      const r = d[p];
-      const g = d[p + 1];
-      const b = d[p + 2];
-      const a = d[p + 3];
-
-      if (a < 10) {
-        d[p] = 255;
-        d[p + 1] = 255;
-        d[p + 2] = 255;
-        d[p + 3] = 255;
-        continue;
-      }
-
-      const lum = 0.299 * r + 0.587 * g + 0.114 * b;
-
-      if (mode === 'full-invert') {
-        d[p] = 255 - r;
-        d[p + 1] = 255 - g;
-        d[p + 2] = 255 - b;
-      } else if (mode === 'monochrome') {
-        if (lum < threshold) {
-          d[p] = 255;
-          d[p + 1] = 255;
-          d[p + 2] = 255;
-        } else {
-          d[p] = 0;
-          d[p + 1] = 0;
-          d[p + 2] = 0;
-        }
-      } else {
-        // smart-clean (Recommended)
-        if (lum < threshold) {
-          // Dark background -> Clean pure white
-          d[p] = 255;
-          d[p + 1] = 255;
-          d[p + 2] = 255;
-        } else {
-          // Light text or graphics on dark background
-          const maxC = Math.max(r, g, b);
-          const minC = Math.min(r, g, b);
-          const isColor = (maxC - minC) > 35;
-
-          if (isColor) {
-            const factor = lum > 160 ? 0.65 : 0.85;
-            d[p] = Math.round(r * factor);
-            d[p + 1] = Math.round(g * factor);
-            d[p + 2] = Math.round(b * factor);
-          } else {
-            // Light text -> Crisp dark text
-            const darkVal = Math.min(50, Math.max(0, 255 - lum));
-            d[p] = darkVal;
-            d[p + 1] = darkVal;
-            d[p + 2] = darkVal;
-          }
-        }
-      }
-    }
+    processCanvasPixels(imgData.data, origData.data, canvas.width, canvas.height, {
+      mode,
+      threshold,
+      preserveImages,
+      imageBoxes,
+    });
 
     ctx.putImageData(imgData, 0, 0);
 
@@ -818,4 +1098,72 @@ export async function invertPdfBackground(
   }
 
   return await outDoc.save();
+}
+
+export async function invertImageFile(
+  imageBytes: Uint8Array,
+  mimeType: string,
+  options: InvertPdfOptions = { mode: 'smart-clean', threshold: 125, preserveImages: true }
+): Promise<{ pdfBytes: Uint8Array; imageBlob: Blob }> {
+  return new Promise((resolve, reject) => {
+    const blob = new Blob([imageBytes as unknown as BlobPart], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const img = new Image();
+
+    img.onload = async () => {
+      try {
+        URL.revokeObjectURL(url);
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        if (!ctx) {
+          reject(new Error('Canvas context unavailable'));
+          return;
+        }
+
+        ctx.drawImage(img, 0, 0);
+        const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const origData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+        const imageBoxes = detectRasterPhotoBoxes(origData.data, canvas.width, canvas.height);
+
+        processCanvasPixels(imgData.data, origData.data, canvas.width, canvas.height, {
+          mode: options.mode || 'smart-clean',
+          threshold: options.threshold ?? 125,
+          preserveImages: options.preserveImages ?? true,
+          imageBoxes,
+        });
+
+        ctx.putImageData(imgData, 0, 0);
+
+        const outBlob = await new Promise<Blob>((res, rej) => {
+          canvas.toBlob((b) => b ? res(b) : rej(new Error('Failed to create image blob')), 'image/png');
+        });
+
+        const outPngBuffer = new Uint8Array(await outBlob.arrayBuffer());
+        const outDoc = await PDFDocument.create();
+        const embeddedPng = await outDoc.embedPng(outPngBuffer);
+        const page = outDoc.addPage([canvas.width, canvas.height]);
+        page.drawImage(embeddedPng, {
+          x: 0,
+          y: 0,
+          width: canvas.width,
+          height: canvas.height,
+        });
+        const pdfBytes = await outDoc.save();
+
+        resolve({ pdfBytes, imageBlob: outBlob });
+      } catch (e) {
+        reject(e);
+      }
+    };
+
+    img.onerror = (e) => {
+      URL.revokeObjectURL(url);
+      reject(new Error('Failed to load image file: ' + e));
+    };
+
+    img.src = url;
+  });
 }
