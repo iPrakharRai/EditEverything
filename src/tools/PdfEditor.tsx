@@ -20,6 +20,7 @@ import {
   Italic, 
   ChevronDown, 
   ChevronRight, 
+  ChevronLeft,
   PlusCircle, 
   Link2, 
   Shapes, 
@@ -403,6 +404,24 @@ export const PdfEditor: React.FC<PdfEditorProps> = ({ initialFile, onBack, onFil
   }, [file, onFileLoadedStateChange]);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [showThumbnailsDrawer, setShowThumbnailsDrawer] = useState(false);
+
+  // Keyboard navigation for multi-page documents (PageUp / PageDown / ArrowLeft / ArrowRight)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+        return;
+      }
+      if (e.key === 'ArrowRight' || e.key === 'PageDown') {
+        setCurrentPage(p => Math.min(totalPages, p + 1));
+      } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+        setCurrentPage(p => Math.max(1, p - 1));
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [totalPages]);
   const [pageDimensions, setPageDimensions] = useState<{ width: number; height: number }>({ width: 595.28, height: 841.89 });
   const [zoom, setZoom] = useState(100);
   const [activeTool, setActiveTool] = useState<'text' | 'links' | 'forms' | 'images' | 'sign' | 'whiteout' | 'annotate' | 'shapes'>('text');
@@ -458,6 +477,12 @@ export const PdfEditor: React.FC<PdfEditorProps> = ({ initialFile, onBack, onFil
   const [ocrStatusText, setOcrStatusText] = useState('');
   const [selectedExistingId, setSelectedExistingId] = useState<string | null>(null);
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
+
+  // Clear selections when switching pages
+  useEffect(() => {
+    setSelectedElementId(null);
+    setSelectedExistingId(null);
+  }, [currentPage]);
 
   // Undo / Redo History Stacks
   const [history, setHistory] = useState<HistorySnapshot[]>([]);
@@ -2655,10 +2680,71 @@ export const PdfEditor: React.FC<PdfEditorProps> = ({ initialFile, onBack, onFil
           </div>
         )}
 
-        {/* 3. PER-PAGE CONTROLS BAR (MATCHING SCREENSHOT 1) */}
-        <div className="w-full max-w-5xl px-4 mt-3 mb-3.5 flex items-center justify-center gap-3 text-sm text-[#1c8ee7]">
-          {/* Page Number */}
-          <span className="font-semibold text-[#1c8ee7] text-base">{currentPage}</span>
+        {/* 3. PER-PAGE CONTROLS BAR (WITH COMPREHENSIVE MULTI-PAGE NAVIGATION) */}
+        <div className="w-full max-w-5xl px-4 mt-3 mb-3.5 flex flex-wrap items-center justify-center gap-2 sm:gap-3 text-sm text-[#1c8ee7]">
+          {/* Multi-Page Navigation Controls */}
+          <div className="flex items-center gap-1 bg-white border border-[#4ca4e8] rounded-md px-1 py-0.5 shadow-2xs">
+            <button
+              type="button"
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={currentPage <= 1}
+              className="p-1 text-[#1c8ee7] hover:bg-[#eaf5fc] rounded disabled:opacity-30 disabled:cursor-not-allowed transition cursor-pointer"
+              title="Previous page (Left Arrow / PageUp)"
+              aria-label="Previous page"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+
+            <div className="flex items-center gap-1.5 px-1.5 text-xs font-semibold text-slate-700">
+              <span className="text-slate-500 font-medium">Page</span>
+              {totalPages > 1 ? (
+                <select
+                  value={currentPage}
+                  onChange={(e) => setCurrentPage(Number(e.target.value))}
+                  className="bg-transparent font-bold text-[#1c8ee7] text-xs cursor-pointer focus:outline-none focus:ring-1 focus:ring-[#1c8ee7] rounded"
+                  aria-label="Select page"
+                >
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                    <option key={p} value={p}>
+                      {p}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <span className="font-bold text-[#1c8ee7]">{currentPage}</span>
+              )}
+              <span className="text-slate-400">/</span>
+              <span className="text-slate-600 font-bold">{totalPages}</span>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              disabled={currentPage >= totalPages}
+              className="p-1 text-[#1c8ee7] hover:bg-[#eaf5fc] rounded disabled:opacity-30 disabled:cursor-not-allowed transition cursor-pointer"
+              title="Next page (Right Arrow / PageDown)"
+              aria-label="Next page"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Toggle Pages Thumbnail Drawer Button */}
+          {totalPages > 1 && (
+            <button
+              type="button"
+              onClick={() => setShowThumbnailsDrawer(prev => !prev)}
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border text-xs font-semibold shadow-2xs transition cursor-pointer ${
+                showThumbnailsDrawer
+                  ? 'bg-[#1c8ee7] text-white border-[#1c8ee7] ring-1 ring-[#1c8ee7]'
+                  : 'bg-white text-[#1c8ee7] border-[#4ca4e8] hover:bg-[#eaf5fc]'
+              }`}
+              title="Toggle page overview thumbnail strip"
+            >
+              <LayoutGrid className="w-3.5 h-3.5" />
+              <span>Pages ({totalPages})</span>
+            </button>
+          )}
 
           {/* Outline Action Pill */}
           <div className="flex items-center border border-[#4ca4e8] rounded bg-white divide-x divide-[#4ca4e8] shadow-2xs overflow-hidden">
@@ -2730,6 +2816,44 @@ export const PdfEditor: React.FC<PdfEditorProps> = ({ initialFile, onBack, onFil
             <span>{isOcrScanning ? t('editor.ocrScanning', 'Scanning OCR...') : t('editor.ocrScan', 'OCR Scan Text')}</span>
           </button>
         </div>
+
+        {/* THUMBNAILS DRAWER / PAGE NAVIGATOR STRIP */}
+        {showThumbnailsDrawer && totalPages > 1 && (
+          <div className="w-full max-w-5xl px-4 mb-3 animate-in fade-in slide-in-from-top-2 duration-150">
+            <div className="bg-white/95 backdrop-blur-xs border border-[#4ca4e8]/50 rounded-xl p-3 shadow-md">
+              <div className="flex items-center justify-between mb-2 pb-1.5 border-b border-slate-100">
+                <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                  <LayoutGrid className="w-3.5 h-3.5 text-[#1c8ee7]" />
+                  <span>Document Pages Overview ({totalPages} Pages)</span>
+                </span>
+                <span className="text-[11px] text-slate-400">Click any page to jump</span>
+              </div>
+              <div className="flex items-center gap-2 overflow-x-auto py-1 custom-scrollbar">
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
+                  <button
+                    key={pageNum}
+                    type="button"
+                    onClick={() => setCurrentPage(pageNum)}
+                    className={`flex flex-col items-center justify-center min-w-[54px] h-[72px] rounded-lg border-2 text-xs font-bold transition cursor-pointer shrink-0 shadow-2xs relative ${
+                      currentPage === pageNum
+                        ? 'border-[#1c8ee7] bg-[#eaf5fc] text-[#1c8ee7] ring-2 ring-[#1c8ee7]/30'
+                        : 'border-slate-200 bg-slate-50 text-slate-600 hover:border-[#4ca4e8] hover:bg-white'
+                    }`}
+                    title={`Go to page ${pageNum}`}
+                  >
+                    <div className="w-6 h-8 bg-white border border-slate-300 rounded-xs mb-1 flex items-center justify-center text-[10px] text-slate-400 shadow-2xs">
+                      {pageNum}
+                    </div>
+                    <span className="text-[10px] font-semibold">P. {pageNum}</span>
+                    {currentPage === pageNum && (
+                      <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-[#1c8ee7] ring-2 ring-white" />
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* 4. MAIN DOCUMENT CANVAS & INTERACTIVE EXISTING TEXT EDITING */}
       <div className="w-full flex justify-center px-4 overflow-x-auto custom-scrollbar">
@@ -3482,6 +3606,50 @@ export const PdfEditor: React.FC<PdfEditorProps> = ({ initialFile, onBack, onFil
 
         </div>
       </div>
+
+      {/* BOTTOM MULTI-PAGE NAVIGATOR BAR */}
+      {totalPages > 1 && (
+        <div className="w-full max-w-xl mx-auto my-4 px-4 flex items-center justify-between gap-2 bg-white/95 backdrop-blur-xs border border-slate-200 rounded-full py-2 px-5 shadow-sm text-xs text-slate-700">
+          <button
+            type="button"
+            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+            disabled={currentPage <= 1}
+            className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-slate-100 hover:bg-[#eaf5fc] hover:text-[#1c8ee7] disabled:opacity-30 disabled:cursor-not-allowed transition font-semibold cursor-pointer"
+            aria-label="Previous page"
+          >
+            <ChevronLeft className="w-3.5 h-3.5" />
+            <span>Previous Page</span>
+          </button>
+
+          <div className="flex items-center gap-2 font-medium">
+            <span>Page</span>
+            <select
+              value={currentPage}
+              onChange={(e) => setCurrentPage(Number(e.target.value))}
+              className="bg-white border border-slate-300 rounded px-2 py-0.5 font-bold text-[#1c8ee7] cursor-pointer focus:outline-none"
+              aria-label="Bottom page switcher"
+            >
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                <option key={p} value={p}>
+                  {p}
+                </option>
+              ))}
+            </select>
+            <span>of <strong className="text-slate-800">{totalPages}</strong></span>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+            disabled={currentPage >= totalPages}
+            className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-slate-100 hover:bg-[#eaf5fc] hover:text-[#1c8ee7] disabled:opacity-30 disabled:cursor-not-allowed transition font-semibold cursor-pointer"
+            aria-label="Next page"
+          >
+            <span>Next Page</span>
+            <ChevronRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
       </div>
 
       {/* 7. EDITEVERYTHING'S FLOATING BOTTOM GREEN BUTTON: "Apply changes >" */}

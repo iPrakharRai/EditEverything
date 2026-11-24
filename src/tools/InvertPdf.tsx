@@ -12,7 +12,9 @@ import {
   Printer,
   Eye,
   FileCheck2,
-  Image as ImageIcon
+  Image as ImageIcon,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import * as pdfjsLib from 'pdfjs-dist';
 import { FileDropzone } from '../components/FileDropzone';
@@ -43,6 +45,7 @@ export const InvertPdf: React.FC<InvertPdfProps> = ({ onBack, initialFile }) => 
   const [previewOriginal, setPreviewOriginal] = useState<string>('');
   const [previewCleaned, setPreviewCleaned] = useState<string>('');
   const [totalPages, setTotalPages] = useState<number>(1);
+  const [previewPage, setPreviewPage] = useState<number>(1);
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
 
   const isImageFile = Boolean(
@@ -51,12 +54,17 @@ export const InvertPdf: React.FC<InvertPdfProps> = ({ onBack, initialFile }) => 
     (file.name.match(/\.(png|jpe?g|webp|bmp|gif)$/i) !== null)
   );
 
-  // Synchronize when initialFile arrives
+  // Synchronize when initialFile arrives or resets
   useEffect(() => {
     if (initialFile) {
       setFile(initialFile);
     }
   }, [initialFile]);
+
+  // Reset preview page to 1 when a new file is uploaded
+  useEffect(() => {
+    setPreviewPage(1);
+  }, [file]);
 
   // Load and render Page 1 Preview (Original & Cleaned)
   useEffect(() => {
@@ -134,9 +142,11 @@ export const InvertPdf: React.FC<InvertPdfProps> = ({ onBack, initialFile }) => 
           const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(file.bytes.slice(0)) });
           const doc = await loadingTask.promise;
           if (!isMounted) return;
-          setTotalPages(doc.numPages || 1);
+          const numPages = doc.numPages || 1;
+          setTotalPages(numPages);
 
-          const page = await doc.getPage(1);
+          const pageToRender = Math.min(Math.max(1, previewPage), numPages);
+          const page = await doc.getPage(pageToRender);
           const viewport = page.getViewport({ scale: 1.5 });
 
           // 1. Render Original Page
@@ -191,7 +201,7 @@ export const InvertPdf: React.FC<InvertPdfProps> = ({ onBack, initialFile }) => 
     return () => {
       isMounted = false;
     };
-  }, [file, mode, threshold, preserveImages]);
+  }, [file, mode, threshold, preserveImages, previewPage]);
 
   const handleProcessAndDownloadPdf = async () => {
     if (!file) return;
@@ -527,17 +537,64 @@ export const InvertPdf: React.FC<InvertPdfProps> = ({ onBack, initialFile }) => 
           </div>
         </div>
 
-        {/* Live Side-by-Side Comparison Preview (Page 1) */}
+        {/* Live Side-by-Side Comparison Preview */}
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="font-bold text-slate-800 text-base sm:text-lg flex items-center gap-2">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <h3 className="font-bold text-slate-800 text-base sm:text-lg flex flex-wrap items-center gap-2">
               <Eye className="w-5 h-5 text-cyan-600" />
-              <span>{t('invert.previewTitle', 'Live Before & After Preview (Page 1)')}</span>
-              {isPreviewLoading && <RefreshCw className="w-4 h-4 text-cyan-600 animate-spin ml-2" />}
+              <span>{t('invert.previewTitle', 'Live Before & After Preview')}</span>
+              {totalPages > 1 && !isImageFile && (
+                <span className="text-xs font-semibold px-2.5 py-0.5 bg-cyan-50 text-cyan-700 border border-cyan-200 rounded-full">
+                  Page {previewPage} of {totalPages}
+                </span>
+              )}
+              {isPreviewLoading && <RefreshCw className="w-4 h-4 text-cyan-600 animate-spin ml-1" />}
             </h3>
-            <span className="text-xs text-slate-500 font-medium">
-              Real-time preview updates with your selected mode and settings
-            </span>
+
+            {/* Multi-Page Navigation for Invert PDF Preview */}
+            {totalPages > 1 && !isImageFile && (
+              <div className="flex items-center gap-2 self-start sm:self-auto bg-white border border-slate-200 rounded-xl px-2.5 py-1 shadow-2xs">
+                <button
+                  type="button"
+                  onClick={() => setPreviewPage(p => Math.max(1, p - 1))}
+                  disabled={previewPage <= 1 || isPreviewLoading}
+                  className="p-1 rounded text-slate-600 hover:bg-slate-100 hover:text-cyan-600 disabled:opacity-30 disabled:cursor-not-allowed transition cursor-pointer"
+                  title="Preview previous page"
+                  aria-label="Previous preview page"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+
+                <div className="flex items-center gap-1.5 text-xs font-medium text-slate-700">
+                  <span className="text-slate-400">Page</span>
+                  <select
+                    value={previewPage}
+                    onChange={(e) => setPreviewPage(Number(e.target.value))}
+                    disabled={isPreviewLoading}
+                    className="bg-transparent font-bold text-cyan-700 cursor-pointer focus:outline-none"
+                    aria-label="Select page to preview"
+                  >
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                      <option key={p} value={p}>
+                        {p}
+                      </option>
+                    ))}
+                  </select>
+                  <span className="text-slate-400">/ {totalPages}</span>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setPreviewPage(p => Math.min(totalPages, p + 1))}
+                  disabled={previewPage >= totalPages || isPreviewLoading}
+                  className="p-1 rounded text-slate-600 hover:bg-slate-100 hover:text-cyan-600 disabled:opacity-30 disabled:cursor-not-allowed transition cursor-pointer"
+                  title="Preview next page"
+                  aria-label="Next preview page"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -549,7 +606,9 @@ export const InvertPdf: React.FC<InvertPdfProps> = ({ onBack, initialFile }) => 
                   <span className="w-2.5 h-2.5 rounded-full bg-slate-800 inline-block"></span>
                   {t('invert.before', 'Before: Original Dark File')}
                 </span>
-                <span className="text-[11px] text-slate-400 font-mono">Page 1</span>
+                <span className="text-[11px] text-slate-400 font-mono">
+                  {isImageFile ? 'Image' : `Page ${previewPage} of ${totalPages}`}
+                </span>
               </div>
 
               <div className="w-full aspect-[1/1.414] bg-slate-900 rounded-2xl overflow-hidden flex items-center justify-center border border-slate-300 relative shadow-inner">
