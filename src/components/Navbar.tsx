@@ -31,8 +31,10 @@ import {
   Table, 
   Presentation, 
   Bot, 
-  Check
+  Check,
+  LogOut
 } from 'lucide-react';
+import { AuthModal, AuthUser } from './AuthModal';
 
 interface NavbarProps {
   onSelectTool: (toolId: string) => void;
@@ -49,15 +51,39 @@ export const Navbar: React.FC<NavbarProps> = ({ onSelectTool, activeToolId, onGo
   const { currentLang, setLanguage, t } = useLanguage();
   const menuRef = useRef<HTMLDivElement>(null);
 
+  // Client-side local authentication state (Zero-Database)
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('editeverything_current_user');
+        return saved ? JSON.parse(saved) : null;
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  });
+  const [showUserDropdown, setShowUserDropdown] = useState(false);
+  const userDropdownRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
         setIsMegaMenuOpen(false);
       }
+      if (userDropdownRef.current && !userDropdownRef.current.contains(event.target as Node)) {
+        setShowUserDropdown(false);
+      }
     }
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem('editeverything_current_user');
+    setCurrentUser(null);
+    setShowUserDropdown(false);
+  };
 
   const handleToolClick = (toolId: string) => {
     onSelectTool(toolId);
@@ -180,12 +206,49 @@ export const Navbar: React.FC<NavbarProps> = ({ onSelectTool, activeToolId, onGo
               {t('nav.desktop', 'Desktop')}
             </button>
 
-            <button 
-              onClick={() => setShowLoginModal(true)} 
-              className="hover:text-slate-900 transition cursor-pointer px-1 py-1"
-            >
-              {t('nav.login', 'Log in')}
-            </button>
+            {currentUser ? (
+              <div className="relative" ref={userDropdownRef}>
+                <button 
+                  onClick={() => setShowUserDropdown(!showUserDropdown)}
+                  className="flex items-center gap-1.5 sm:gap-2 pl-1.5 pr-2 py-1 rounded-xl hover:bg-slate-100 transition cursor-pointer border border-slate-200/90 bg-white shadow-xs"
+                >
+                  <div className={`w-6 h-6 rounded-lg bg-gradient-to-tr ${currentUser.avatarColor || 'from-cyan-600 to-sky-400'} text-white font-bold text-xs flex items-center justify-center shadow-xs`}>
+                    {currentUser.name.charAt(0).toUpperCase()}
+                  </div>
+                  <span className="text-xs font-bold text-slate-800 max-w-[90px] truncate hidden sm:inline">
+                    {currentUser.name}
+                  </span>
+                  <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${showUserDropdown ? 'rotate-180' : ''}`} />
+                </button>
+
+                {showUserDropdown && (
+                  <div className="absolute right-0 mt-2 w-60 bg-white rounded-2xl shadow-xl border border-slate-200 p-2 z-50 animate-in fade-in zoom-in-95 duration-150">
+                    <div className="px-3 py-2.5 border-b border-slate-100 mb-1">
+                      <div className="text-xs font-bold text-slate-800 truncate">{currentUser.name}</div>
+                      <div className="text-[11px] text-slate-500 truncate">{currentUser.email}</div>
+                      <span className="inline-block mt-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full bg-cyan-50 text-cyan-800 border border-cyan-200">
+                        {currentUser.isGuest ? 'Guest Session (Client-Only)' : 'Local Account (Zero Database)'}
+                      </span>
+                    </div>
+
+                    <button
+                      onClick={handleLogout}
+                      className="w-full text-left px-3 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 rounded-xl transition flex items-center gap-2 cursor-pointer mt-1"
+                    >
+                      <LogOut className="w-3.5 h-3.5 text-rose-500" />
+                      <span>Log out</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <button 
+                onClick={() => setShowLoginModal(true)} 
+                className="hover:text-slate-900 transition cursor-pointer px-1 py-1"
+              >
+                {t('nav.login', 'Log in')}
+              </button>
+            )}
 
             <button 
               onClick={() => setShowLangModal(true)} 
@@ -603,33 +666,14 @@ export const Navbar: React.FC<NavbarProps> = ({ onSelectTool, activeToolId, onGo
         document.body
       )}
 
-      {/* Login Modal */}
-      {showLoginModal && typeof document !== 'undefined' && createPortal(
-        <div 
-          onClick={(e) => { if (e.target === e.currentTarget) setShowLoginModal(false); }}
-          className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6 overflow-y-auto animate-in fade-in duration-150"
-        >
-          <div className="bg-white rounded-3xl max-w-sm w-full p-6 sm:p-8 shadow-2xl relative my-auto animate-in fade-in zoom-in-95 text-center max-h-[92vh] overflow-y-auto custom-scrollbar border border-slate-100">
-            <button 
-              onClick={() => setShowLoginModal(false)} 
-              className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition cursor-pointer"
-            >
-              <X className="w-5 h-5" />
-            </button>
-            <h3 className="text-2xl font-black text-slate-800 mb-1">{t('login.title', 'Log in to EditEverything')}</h3>
-            <p className="text-xs text-slate-500 mb-6">{t('login.subtitle', 'Access your saved templates and preferences.')}</p>
-            <input type="email" placeholder={t('login.emailPlaceholder', 'Your email address')} className="w-full px-3.5 py-2.5 text-sm border border-slate-200 rounded-xl mb-3 outline-none focus:ring-2 focus:ring-[#00bed6]" />
-            <input type="password" placeholder={t('login.passwordPlaceholder', 'Password')} className="w-full px-3.5 py-2.5 text-sm border border-slate-200 rounded-xl mb-4 outline-none focus:ring-2 focus:ring-[#00bed6]" />
-            <button 
-              onClick={() => { alert('Logged in successfully!'); setShowLoginModal(false); }} 
-              className="w-full py-3 bg-gradient-to-r from-[#00bed6] to-[#0891b2] hover:from-[#00abc1] hover:to-[#0e7490] text-white font-bold text-sm rounded-xl transition shadow-md shadow-cyan-500/25 active:scale-95 cursor-pointer"
-            >
-              {t('nav.login', 'Log in')}
-            </button>
-          </div>
-        </div>,
-        document.body
-      )}
+      {/* Dynamic Zero-Database Auth Modal */}
+      <AuthModal
+        isOpen={showLoginModal}
+        onClose={() => setShowLoginModal(false)}
+        onLoginSuccess={(user) => {
+          setCurrentUser(user);
+        }}
+      />
 
       {/* Languages Modal */}
       {showLangModal && typeof document !== 'undefined' && createPortal(

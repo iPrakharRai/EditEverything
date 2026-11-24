@@ -10,6 +10,7 @@ import {
   ExternalLink,
   ChevronDown
 } from 'lucide-react';
+import { LegalInfoModal, InfoModalSection } from './LegalInfoModal';
 
 interface FooterProps {
   onSelectTool: (toolId: string) => void;
@@ -18,6 +19,7 @@ interface FooterProps {
 export const Footer: React.FC<FooterProps> = ({ onSelectTool }) => {
   const { currentLang, setLanguage, t } = useLanguage();
   const [showAllLanguages, setShowAllLanguages] = useState(false);
+  const [activeModalSection, setActiveModalSection] = useState<InfoModalSection | null>(null);
 
   const ALL_TOOLS = [
     { name: 'Add PDF Page Numbers', toolId: 'page-numbers' },
@@ -149,12 +151,12 @@ export const Footer: React.FC<FooterProps> = ({ onSelectTool }) => {
               Resources
             </h3>
             <ul className="space-y-2.5 text-xs sm:text-sm">
-              <li><a href="#pricing" onClick={(e) => { e.preventDefault(); alert('Free Web tier active.'); }} className="hover:text-cyan-400 transition">Pricing & Upgrade</a></li>
-              <li><a href="#desktop" onClick={(e) => { e.preventDefault(); alert('EditEverything Desktop for Windows and Mac.'); }} className="hover:text-cyan-400 transition">EditEverything Desktop</a></li>
-              <li><a href="#gsuite" onClick={(e) => { e.preventDefault(); alert('EditEverything for Google Workspace.'); }} className="hover:text-cyan-400 transition">EditEverything for G Suite</a></li>
-              <li><a href="#education" onClick={(e) => { e.preventDefault(); alert('EditEverything for Education.'); }} className="hover:text-cyan-400 transition">EditEverything for Education</a></li>
-              <li><a href="#about" onClick={(e) => { e.preventDefault(); alert('EditEverything - Easy, pleasant and productive PDF editor.'); }} className="hover:text-cyan-400 transition">About</a></li>
-              <li><a href="#blog" onClick={(e) => { e.preventDefault(); alert('EditEverything Engineering Blog.'); }} className="hover:text-cyan-400 transition">Blog</a></li>
+              <li><button onClick={() => setActiveModalSection('pricing')} className="text-left hover:text-cyan-400 transition cursor-pointer">Pricing & Upgrade</button></li>
+              <li><button onClick={() => setActiveModalSection('desktop')} className="text-left hover:text-cyan-400 transition cursor-pointer">EditEverything Desktop</button></li>
+              <li><button onClick={() => setActiveModalSection('gsuite')} className="text-left hover:text-cyan-400 transition cursor-pointer">EditEverything for G Suite</button></li>
+              <li><button onClick={() => setActiveModalSection('education')} className="text-left hover:text-cyan-400 transition cursor-pointer">EditEverything for Education</button></li>
+              <li><button onClick={() => setActiveModalSection('about')} className="text-left hover:text-cyan-400 transition cursor-pointer">About</button></li>
+              <li><button onClick={() => setActiveModalSection('blog')} className="text-left hover:text-cyan-400 transition cursor-pointer">Blog</button></li>
             </ul>
           </div>
 
@@ -164,15 +166,15 @@ export const Footer: React.FC<FooterProps> = ({ onSelectTool }) => {
               API
             </h3>
             <ul className="space-y-2.5 text-xs sm:text-sm mb-6">
-              <li><a href="#api" onClick={(e) => { e.preventDefault(); alert('HTML to PDF API documentation.'); }} className="hover:text-cyan-400 transition">HTML to PDF API</a></li>
-              <li><a href="#docs" onClick={(e) => { e.preventDefault(); alert('EditEverything Developer Documentation.'); }} className="hover:text-cyan-400 transition">Developer Docs</a></li>
+              <li><button onClick={() => setActiveModalSection('api')} className="text-left hover:text-cyan-400 transition cursor-pointer">HTML to PDF API</button></li>
+              <li><button onClick={() => setActiveModalSection('docs')} className="text-left hover:text-cyan-400 transition cursor-pointer">Developer Docs</button></li>
             </ul>
 
             <h3 className="text-white font-bold text-xs sm:text-sm uppercase tracking-wider mb-3">
               Contact
             </h3>
             <a 
-              href="mailto:raiprakhar0123@gmail.com?subject=Hello" 
+              href="mailto:raiprakhar0123@gmail.com?subject=Hello%20EditEverything" 
               className="text-xs sm:text-sm text-cyan-400 hover:text-cyan-300 flex items-center gap-1.5 transition"
             >
               <Mail className="w-3.5 h-3.5" />
@@ -186,12 +188,12 @@ export const Footer: React.FC<FooterProps> = ({ onSelectTool }) => {
               Legal
             </h3>
             <ul className="space-y-2.5 text-xs sm:text-sm">
-              <li><a href="#terms" onClick={(e) => { e.preventDefault(); alert('EditEverything Terms of Use.'); }} className="hover:text-cyan-400 transition">Terms of Use</a></li>
-              <li><a href="#privacy" onClick={(e) => { e.preventDefault(); alert('Files stay secure and are deleted after processing.'); }} className="hover:text-cyan-400 transition">Privacy Policy</a></li>
-              <li><a href="#cookies" onClick={(e) => { e.preventDefault(); alert('Cookies and Privacy settings.'); }} className="hover:text-cyan-400 transition">Cookies</a></li>
-              <li><a href="#privacy-settings" onClick={(e) => { e.preventDefault(); alert('Privacy Settings.'); }} className="hover:text-cyan-400 transition">Privacy Settings</a></li>
-              <li><a href="#security" onClick={(e) => { e.preventDefault(); alert('Encryption & Sandboxed client execution.'); }} className="hover:text-cyan-400 transition">Security</a></li>
-              <li><a href="#sla" onClick={(e) => { e.preventDefault(); alert('EditEverything Service Level Agreement.'); }} className="hover:text-cyan-400 transition">SLA</a></li>
+              <li><button onClick={() => setActiveModalSection('terms')} className="text-left hover:text-cyan-400 transition cursor-pointer">Terms of Use</button></li>
+              <li><button onClick={() => setActiveModalSection('privacy')} className="text-left hover:text-cyan-400 transition cursor-pointer">Privacy Policy</button></li>
+              <li><button onClick={() => setActiveModalSection('cookies')} className="text-left hover:text-cyan-400 transition cursor-pointer">Cookies</button></li>
+              <li><button onClick={() => setActiveModalSection('privacy-settings')} className="text-left hover:text-cyan-400 transition cursor-pointer">Privacy Settings</button></li>
+              <li><button onClick={() => setActiveModalSection('security')} className="text-left hover:text-cyan-400 transition cursor-pointer">Security</button></li>
+              <li><button onClick={() => setActiveModalSection('sla')} className="text-left hover:text-cyan-400 transition cursor-pointer">SLA</button></li>
             </ul>
           </div>
 
@@ -257,6 +259,13 @@ export const Footer: React.FC<FooterProps> = ({ onSelectTool }) => {
         </div>
 
       </div>
+
+      {/* Comprehensive Information & Legal Modal */}
+      <LegalInfoModal
+        isOpen={activeModalSection !== null}
+        initialSection={activeModalSection || 'terms'}
+        onClose={() => setActiveModalSection(null)}
+      />
     </footer>
   );
 };
