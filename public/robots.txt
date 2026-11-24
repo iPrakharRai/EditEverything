@@ -1,4 +1,5 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://edit-everything.vercel.app/sitemap.xml
+Sitemap: https://editeverything.online/sitemap.xml
+Host: https://editeverything.online

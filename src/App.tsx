@@ -1,5 +1,5 @@
 import { WaterBackground } from './components/WaterBackground';
-import React, { useState, Suspense, lazy } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { Navbar } from './components/Navbar';
 import { Hero } from './components/Hero';
 import { ToolGrid } from './components/ToolGrid';
@@ -29,13 +29,57 @@ const ToolLoadingFallback = () => (
   </div>
 );
 
+const VALID_TOOLS = [
+  'edit', 'invert-pdf', 'image-text-editor', 'merge', 'split', 'compress',
+  'delete-pages', 'crop', 'rotate', 'watermark', 'page-numbers', 'header-footer',
+  'bates-numbering', 'resize', 'metadata', 'flatten', 'grayscale', 'whiteout',
+  'fill-sign', 'protect', 'unlock', 'pdf-to-images', 'images-to-pdf',
+  'pdf-to-text', 'ocr'
+];
+
+function getToolFromLocation(): string | null {
+  try {
+    const path = window.location.pathname.replace(/^\/+|\/+$/g, '').toLowerCase();
+    if (path && VALID_TOOLS.includes(path)) {
+      return path;
+    }
+    const params = new URLSearchParams(window.location.search);
+    const queryTool = params.get('tool');
+    if (queryTool && VALID_TOOLS.includes(queryTool.toLowerCase())) {
+      return queryTool.toLowerCase();
+    }
+    const hash = window.location.hash.replace('#', '').toLowerCase();
+    if (hash && VALID_TOOLS.includes(hash)) {
+      return hash;
+    }
+  } catch {
+    // Non-browser / sandbox fallback
+  }
+  return null;
+}
+
 export function App() {
-  const [activeToolId, setActiveToolId] = useState<string | null>(null);
+  const [activeToolId, setActiveToolId] = useState<string | null>(getToolFromLocation);
   const [preloadedFile, setPreloadedFile] = useState<{ name: string; bytes: Uint8Array } | null>(null);
   const [isEditorDocumentLoaded, setIsEditorDocumentLoaded] = useState(false);
 
+  // Sync state with browser Back/Forward buttons (popstate)
+  useEffect(() => {
+    const handlePopState = () => {
+      setActiveToolId(getToolFromLocation());
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
   const handleSelectTool = (toolId: string) => {
     setActiveToolId(toolId);
+    try {
+      const currentPath = window.location.pathname.replace(/^\/+|\/+$/g, '');
+      if (currentPath !== toolId) {
+        window.history.pushState(null, '', `/${toolId}`);
+      }
+    } catch {}
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -45,7 +89,7 @@ export function App() {
   ) => {
     if ('bytes' in fileInput && !(typeof (fileInput as any).bytes === 'function')) {
       setPreloadedFile(fileInput as { name: string; bytes: Uint8Array });
-      setActiveToolId(defaultTool);
+      handleSelectTool(defaultTool);
     } else {
       const file = fileInput as File;
       const reader = new FileReader();
@@ -55,7 +99,7 @@ export function App() {
             name: file.name,
             bytes: new Uint8Array(reader.result),
           });
-          setActiveToolId(defaultTool);
+          handleSelectTool(defaultTool);
         }
       };
       reader.readAsArrayBuffer(file);
@@ -67,6 +111,11 @@ export function App() {
     setActiveToolId(null);
     setPreloadedFile(null);
     setIsEditorDocumentLoaded(false);
+    try {
+      if (window.location.pathname !== '/') {
+        window.history.pushState(null, '', '/');
+      }
+    } catch {}
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
