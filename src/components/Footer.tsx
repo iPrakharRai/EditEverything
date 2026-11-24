@@ -1,5 +1,5 @@
 import { useLanguage } from '../i18n/LanguageContext';
-import React, { useState } from 'react';
+import React, { useState, Suspense, lazy } from 'react';
 import { 
   ShieldCheck, 
   Clock, 
@@ -10,7 +10,9 @@ import {
   ExternalLink,
   ChevronDown
 } from 'lucide-react';
-import { LegalInfoModal, InfoModalSection } from './LegalInfoModal';
+import type { InfoModalSection } from './LegalInfoModal';
+
+const LegalInfoModal = lazy(() => import('./LegalInfoModal').then(m => ({ default: m.LegalInfoModal })));
 
 interface FooterProps {
   onSelectTool: (toolId: string) => void;
@@ -260,12 +262,16 @@ export const Footer: React.FC<FooterProps> = ({ onSelectTool }) => {
 
       </div>
 
-      {/* Comprehensive Information & Legal Modal */}
-      <LegalInfoModal
-        isOpen={activeModalSection !== null}
-        initialSection={activeModalSection || 'terms'}
-        onClose={() => setActiveModalSection(null)}
-      />
+      {/* Comprehensive Information & Legal Modal (Lazy-Loaded) */}
+      {activeModalSection && (
+        <Suspense fallback={null}>
+          <LegalInfoModal
+            isOpen={activeModalSection !== null}
+            initialSection={activeModalSection}
+            onClose={() => setActiveModalSection(null)}
+          />
+        </Suspense>
+      )}
     </footer>
   );
 };

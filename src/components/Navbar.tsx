@@ -1,5 +1,5 @@
 import { useLanguage } from '../i18n/LanguageContext';
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, Suspense, lazy } from 'react';
 import { createPortal } from 'react-dom';
 import { 
   ChevronDown, 
@@ -34,7 +34,9 @@ import {
   Check,
   LogOut
 } from 'lucide-react';
-import { AuthModal, AuthUser } from './AuthModal';
+import type { AuthUser } from './AuthModal';
+
+const AuthModal = lazy(() => import('./AuthModal').then(m => ({ default: m.AuthModal })));
 
 interface NavbarProps {
   onSelectTool: (toolId: string) => void;
@@ -666,14 +668,18 @@ export const Navbar: React.FC<NavbarProps> = ({ onSelectTool, activeToolId, onGo
         document.body
       )}
 
-      {/* Dynamic Zero-Database Auth Modal */}
-      <AuthModal
-        isOpen={showLoginModal}
-        onClose={() => setShowLoginModal(false)}
-        onLoginSuccess={(user) => {
-          setCurrentUser(user);
-        }}
-      />
+      {/* Dynamic Zero-Database Auth Modal (Lazy-Loaded) */}
+      {showLoginModal && (
+        <Suspense fallback={null}>
+          <AuthModal
+            isOpen={showLoginModal}
+            onClose={() => setShowLoginModal(false)}
+            onLoginSuccess={(user) => {
+              setCurrentUser(user);
+            }}
+          />
+        </Suspense>
+      )}
 
       {/* Languages Modal */}
       {showLangModal && typeof document !== 'undefined' && createPortal(
