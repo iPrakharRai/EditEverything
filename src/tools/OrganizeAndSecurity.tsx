@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   ArrowLeft, 
   Crop, 
@@ -11,13 +11,17 @@ import {
   Eraser, 
   Download,
   Sparkles,
-  Check
+  Check,
+  Loader2,
+  Eye
 } from 'lucide-react';
 import { 
   addHeaderFooter, 
   addBatesNumbering, 
   resizePdf, 
   editMetadata, 
+  convertPdfToGrayscale,
+  generateGrayscalePreview,
   downloadBlob 
 } from '../utils/pdfProcessor';
 import { FileDropzone } from '../components/FileDropzone';
@@ -53,9 +57,42 @@ export const OrganizeAndSecurity: React.FC<OrganizeAndSecurityProps> = ({ toolId
   // Crop / Redact
   const [cropMargin, setCropMargin] = useState(20);
 
+  // Grayscale States
+  const [grayscaleMode, setGrayscaleMode] = useState<'grayscale' | 'monochrome'>('grayscale');
+  const [grayscaleProgress, setGrayscaleProgress] = useState<{ current: number; total: number } | null>(null);
+  const [grayscalePreview, setGrayscalePreview] = useState<string | null>(null);
+  const [isGeneratingPreview, setIsGeneratingPreview] = useState(false);
+
+  useEffect(() => {
+    if (toolId !== 'grayscale' || !file) {
+      setGrayscalePreview(null);
+      return;
+    }
+
+    let isMounted = true;
+    setIsGeneratingPreview(true);
+    generateGrayscalePreview(file.bytes, grayscaleMode)
+      .then((dataUrl) => {
+        if (isMounted) {
+          setGrayscalePreview(dataUrl);
+        }
+      })
+      .catch((err) => {
+        console.warn('Could not generate grayscale preview:', err);
+      })
+      .finally(() => {
+        if (isMounted) setIsGeneratingPreview(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [file, toolId, grayscaleMode]);
+
   const handleApply = async () => {
     if (!file) return;
     setIsProcessing(true);
+    setGrayscaleProgress(null);
 
     try {
       let outputBytes: Uint8Array = file.bytes;
@@ -73,8 +110,13 @@ export const OrganizeAndSecurity: React.FC<OrganizeAndSecurityProps> = ({ toolId
           subject: metaSubject,
           keywords: metaKeywords,
         });
+      } else if (toolId === 'grayscale') {
+        outputBytes = await convertPdfToGrayscale(file.bytes, {
+          mode: grayscaleMode,
+          onProgress: (current, total) => setGrayscaleProgress({ current, total }),
+        });
       } else {
-        // crop, flatten, grayscale, whiteout
+        // crop, flatten, whiteout
         outputBytes = file.bytes;
       }
 
@@ -85,6 +127,7 @@ export const OrganizeAndSecurity: React.FC<OrganizeAndSecurityProps> = ({ toolId
       alert('Error processing document');
     } finally {
       setIsProcessing(false);
+      setGrayscaleProgress(null);
     }
   };
 
@@ -291,12 +334,116 @@ export const OrganizeAndSecurity: React.FC<OrganizeAndSecurityProps> = ({ toolId
             </div>
           )}
 
-          {['crop', 'flatten', 'grayscale', 'whiteout'].includes(toolId) && (
+          {toolId === 'grayscale' && (
+            <div className="space-y-6">
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">
+                  Select Grayscale Conversion Mode:
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setGrayscaleMode('grayscale')}
+                    className={`p-4 rounded-xl border text-left transition flex items-start gap-3 cursor-pointer ${
+                      grayscaleMode === 'grayscale'
+                        ? 'border-cyan-500 bg-cyan-50/50 ring-2 ring-cyan-500/20'
+                        : 'border-slate-200 hover:bg-slate-50'
+                    }`}
+                  >
+                    <div className={`p-2 rounded-lg ${grayscaleMode === 'grayscale' ? 'bg-cyan-500 text-white' : 'bg-slate-100 text-slate-600'}`}>
+                      <Contrast className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div className="font-bold text-sm text-slate-800 flex items-center gap-1.5">
+                        Smooth Grayscale
+                        <span className="text-[10px] font-semibold bg-cyan-100 text-cyan-700 px-1.5 py-0.5 rounded">Recommended</span>
+                      </div>
+                      <p className="text-xs text-slate-500 mt-1">
+                        Preserves 256 gray tones. Perfect for photos, images, graphics, and smooth font rendering.
+                      </p>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setGrayscaleMode('monochrome')}
+                    className={`p-4 rounded-xl border text-left transition flex items-start gap-3 cursor-pointer ${
+                      grayscaleMode === 'monochrome'
+                        ? 'border-cyan-500 bg-cyan-50/50 ring-2 ring-cyan-500/20'
+                        : 'border-slate-200 hover:bg-slate-50'
+                    }`}
+                  >
+                    <div className={`p-2 rounded-lg ${grayscaleMode === 'monochrome' ? 'bg-cyan-500 text-white' : 'bg-slate-100 text-slate-600'}`}>
+                      <Disc className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div className="font-bold text-sm text-slate-800">High-Contrast B&W (Laser)</div>
+                      <p className="text-xs text-slate-500 mt-1">
+                        1-bit thresholding. Removes background tint, saves maximum toner and ink on office printers.
+                      </p>
+                    </div>
+                  </button>
+                </div>
+              </div>
+
+              {/* Page 1 Preview Card */}
+              <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <Eye className="w-4 h-4 text-slate-500" />
+                    <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                      Page 1 Live Grayscale Preview
+                    </span>
+                  </div>
+                  {isGeneratingPreview && (
+                    <div className="flex items-center gap-1.5 text-xs text-cyan-600 font-medium">
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>Rendering preview...</span>
+                    </div>
+                  )}
+                </div>
+
+                {grayscalePreview ? (
+                  <div className="flex justify-center p-2 bg-slate-200/50 rounded-lg">
+                    <img
+                      src={grayscalePreview}
+                      alt="Grayscale Page 1 Preview"
+                      className="max-h-72 object-contain rounded shadow-xs border border-slate-300"
+                    />
+                  </div>
+                ) : (
+                  <div className="h-32 flex items-center justify-center text-xs text-slate-400">
+                    {isGeneratingPreview ? 'Rendering page preview...' : 'Preview ready upon loading'}
+                  </div>
+                )}
+              </div>
+
+              {/* Progress Indicator */}
+              {isProcessing && grayscaleProgress && (
+                <div className="p-4 bg-cyan-50 border border-cyan-100 rounded-xl space-y-2">
+                  <div className="flex justify-between text-xs font-semibold text-cyan-900">
+                    <span className="flex items-center gap-1.5">
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-cyan-600" />
+                      Converting page {grayscaleProgress.current} of {grayscaleProgress.total}...
+                    </span>
+                    <span>{Math.round((grayscaleProgress.current / grayscaleProgress.total) * 100)}%</span>
+                  </div>
+                  <div className="w-full bg-cyan-200/60 rounded-full h-2 overflow-hidden">
+                    <div
+                      className="bg-cyan-600 h-2 rounded-full transition-all duration-200"
+                      style={{ width: `${(grayscaleProgress.current / grayscaleProgress.total) * 100}%` }}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {['crop', 'flatten', 'whiteout'].includes(toolId) && (
             <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 text-center py-6">
               <p className="text-sm font-semibold text-slate-700 mb-1">
                 {toolId === 'crop' && 'Ready to crop page margins by 20 points'}
                 {toolId === 'flatten' && 'Ready to permanently flatten all interactive form fields'}
-                {toolId === 'grayscale' && 'Ready to convert all pages to ink-saving grayscale'}
                 {toolId === 'whiteout' && 'Ready to apply redaction layers'}
               </p>
               <p className="text-xs text-slate-400">Click below to execute and save your document</p>

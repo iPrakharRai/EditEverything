@@ -1249,3 +1249,306 @@ export async function checkPdfIsEncrypted(pdfBytes: Uint8Array): Promise<{
 }> {
   return await isEncrypted(pdfBytes);
 }
+
+// ---------------------------------------------------------------------------
+// Real Client-Side Grayscale PDF Converter (Rec. 709 Luminance / Monochrome)
+// ---------------------------------------------------------------------------
+export async function convertPdfToGrayscale(
+  fileBytes: Uint8Array,
+  options?: {
+    mode?: 'grayscale' | 'monochrome';
+    threshold?: number;
+    quality?: number;
+    onProgress?: (current: number, total: number) => void;
+  }
+): Promise<Uint8Array> {
+  const mode = options?.mode || 'grayscale';
+  const threshold = options?.threshold ?? 140;
+  const quality = options?.quality ?? 0.88;
+
+  const loadingTask = pdfjsLib.getDocument({
+    data: new Uint8Array(fileBytes.slice(0)),
+  });
+  const pdfDoc = await loadingTask.promise;
+  const numPages = pdfDoc.numPages;
+
+  const outDoc = await PDFDocument.create();
+
+  for (let pageNum = 1; pageNum <= numPages; pageNum++) {
+    options?.onProgress?.(pageNum, numPages);
+
+    const page = await pdfDoc.getPage(pageNum);
+    const unscaledViewport = page.getViewport({ scale: 1.0 });
+
+    // Render at 2.0x scale for crisp high-resolution text and graphics
+    const scale = 2.0;
+    const viewport = page.getViewport({ scale });
+
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.floor(viewport.width);
+    canvas.height = Math.floor(viewport.height);
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    if (!ctx) throw new Error('Could not create 2D canvas context');
+
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    await page.render({ canvasContext: ctx, viewport }).promise;
+
+    const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const d = imgData.data;
+
+    if (mode === 'monochrome') {
+      // High-contrast pure black and white (laser print ink saver)
+      for (let i = 0; i < d.length; i += 4) {
+        const gray = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+        const val = gray < threshold ? 0 : 255;
+        d[i] = val;
+        d[i + 1] = val;
+        d[i + 2] = val;
+      }
+    } else {
+      // Smooth 256-level grayscale (Rec. 709 luminance)
+      for (let i = 0; i < d.length; i += 4) {
+        const gray = Math.round(0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]);
+        d[i] = gray;
+        d[i + 1] = gray;
+        d[i + 2] = gray;
+      }
+    }
+
+    ctx.putImageData(imgData, 0, 0);
+
+    const blob = await new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob(
+        b => b ? resolve(b) : reject(new Error('Failed to encode canvas to blob')),
+        'image/jpeg',
+        quality
+      );
+    });
+
+    const imgBytes = new Uint8Array(await blob.arrayBuffer());
+    const embeddedImg = await outDoc.embedJpg(imgBytes);
+
+    const newPage = outDoc.addPage([unscaledViewport.width, unscaledViewport.height]);
+    newPage.drawImage(embeddedImg, {
+      x: 0,
+      y: 0,
+      width: unscaledViewport.width,
+      height: unscaledViewport.height,
+    });
+  }
+
+  return await outDoc.save();
+}
+
+export async function generateGrayscalePreview(
+  fileBytes: Uint8Array,
+  mode: 'grayscale' | 'monochrome' = 'grayscale'
+): Promise<string> {
+  const loadingTask = pdfjsLib.getDocument({
+    data: new Uint8Array(fileBytes.slice(0)),
+  });
+  const pdfDoc = await loadingTask.promise;
+  const page = await pdfDoc.getPage(1);
+  const viewport = page.getViewport({ scale: 1.0 });
+
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.floor(viewport.width);
+  canvas.height = Math.floor(viewport.height);
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  if (!ctx) return '';
+
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  await page.render({ canvasContext: ctx, viewport }).promise;
+
+  const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const d = imgData.data;
+  if (mode === 'monochrome') {
+    for (let i = 0; i < d.length; i += 4) {
+      const gray = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+      const val = gray < 140 ? 0 : 255;
+      d[i] = val;
+      d[i + 1] = val;
+      d[i + 2] = val;
+    }
+  } else {
+    for (let i = 0; i < d.length; i += 4) {
+      const gray = Math.round(0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]);
+      d[i] = gray;
+      d[i + 1] = gray;
+      d[i + 2] = gray;
+    }
+  }
+  ctx.putImageData(imgData, 0, 0);
+  return canvas.toDataURL('image/jpeg', 0.85);
+}
+
+// ---------------------------------------------------------------------------
+// Real Client-Side Text Extraction (pdfjs-dist + OCR Fallback)
+// ---------------------------------------------------------------------------
+export async function extractTextFromPdf(
+  fileBytes: Uint8Array,
+  onProgress?: (current: number, total: number, status: string) => void
+): Promise<string> {
+  const loadingTask = pdfjsLib.getDocument({
+    data: new Uint8Array(fileBytes.slice(0)),
+  });
+  const pdfDoc = await loadingTask.promise;
+  const numPages = pdfDoc.numPages;
+
+  const pageTexts: string[] = [];
+  let totalCharsFound = 0;
+
+  for (let pageNum = 1; pageNum <= numPages; pageNum++) {
+    onProgress?.(pageNum, numPages, `Extracting text from page ${pageNum} of ${numPages}...`);
+    const page = await pdfDoc.getPage(pageNum);
+    const content = await page.getTextContent();
+    const strings = (content.items as any[])
+      .map(item => item.str || '')
+      .filter(Boolean);
+
+    const pageText = strings.join(' ').replace(/\s+/g, ' ').trim();
+    totalCharsFound += pageText.length;
+    pageTexts.push(pageText);
+  }
+
+  // If the document contains meaningful selectable text, return it
+  if (totalCharsFound > 30) {
+    return pageTexts
+      .map((txt, idx) => `--- Page ${idx + 1} ---\n${txt || '[No text on page]'}`)
+      .join('\n\n');
+  }
+
+  // Otherwise, it's a scanned/image PDF: Run Tesseract.js OCR across pages
+  onProgress?.(1, numPages, 'Scanned document detected. Initializing OCR recognition...');
+  const Tesseract = await import('tesseract.js');
+  const ocrResults: string[] = [];
+
+  for (let pageNum = 1; pageNum <= numPages; pageNum++) {
+    onProgress?.(pageNum, numPages, `Running OCR recognition on page ${pageNum} of ${numPages}...`);
+    const page = await pdfDoc.getPage(pageNum);
+    const viewport = page.getViewport({ scale: 1.5 });
+
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.floor(viewport.width);
+    canvas.height = Math.floor(viewport.height);
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      await page.render({ canvasContext: ctx, viewport }).promise;
+
+      const res = await Tesseract.recognize(canvas, 'eng');
+      const text = (res.data.text || '').trim();
+      ocrResults.push(`--- Page ${pageNum} (OCR) ---\n${text || '[No text recognized]'}`);
+    }
+  }
+
+  return ocrResults.join('\n\n');
+}
+
+// ---------------------------------------------------------------------------
+// Real Client-Side OCR Searchable PDF Generator (Sandwich PDF)
+// ---------------------------------------------------------------------------
+export async function createSearchablePdf(
+  fileBytes: Uint8Array,
+  options?: {
+    onProgress?: (current: number, total: number, status: string) => void;
+  }
+): Promise<{ pdfBytes: Uint8Array; recognizedText: string }> {
+  // 1. Load document with pdfjs-dist for rendering and pdf-lib for adding text layer
+  const loadingTask = pdfjsLib.getDocument({
+    data: new Uint8Array(fileBytes.slice(0)),
+  });
+  const pdfJsDoc = await loadingTask.promise;
+  const numPages = pdfJsDoc.numPages;
+
+  const pdfLibDoc = await PDFDocument.load(new Uint8Array(fileBytes.slice(0)), {
+    ignoreEncryption: true,
+  });
+  const helveticaFont = await pdfLibDoc.embedFont(StandardFonts.Helvetica);
+
+  options?.onProgress?.(1, numPages, 'Initializing AI OCR Engine...');
+  const Tesseract = await import('tesseract.js');
+  const allRecognizedTexts: string[] = [];
+
+  for (let pageNum = 1; pageNum <= numPages; pageNum++) {
+    options?.onProgress?.(pageNum, numPages, `Scanning and recognizing text on page ${pageNum} of ${numPages}...`);
+
+    const pdfJsPage = await pdfJsDoc.getPage(pageNum);
+    const pdfLibPage = pdfLibDoc.getPage(pageNum - 1);
+    const { width: pageW, height: pageH } = pdfLibPage.getSize();
+
+    // Render page to canvas for OCR
+    const scale = 1.5;
+    const viewport = pdfJsPage.getViewport({ scale });
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.floor(viewport.width);
+    canvas.height = Math.floor(viewport.height);
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    if (!ctx) continue;
+
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    await pdfJsPage.render({ canvasContext: ctx, viewport }).promise;
+
+    // Run Tesseract OCR on page canvas
+    const res = await Tesseract.recognize(canvas, 'eng');
+    const pageText = (res.data.text || '').trim();
+    allRecognizedTexts.push(`--- Page ${pageNum} ---\n${pageText || '[No text detected]'}`);
+
+    // Extract lines and bounding boxes
+    const lines: any[] = [];
+    if ((res.data as any).lines && Array.isArray((res.data as any).lines)) {
+      lines.push(...(res.data as any).lines);
+    } else if (res.data.blocks) {
+      for (const block of res.data.blocks) {
+        for (const p of (block.paragraphs || [])) {
+          for (const l of (p.lines || [])) {
+            lines.push(l);
+          }
+        }
+      }
+    }
+
+    const scaleX = pageW / canvas.width;
+    const scaleY = pageH / canvas.height;
+
+    // Draw invisible selectable text at exact OCR bounding box positions
+    for (const l of lines) {
+      const rawText = (l.text || '').trim();
+      if (!rawText) continue;
+
+      // Sanitize string to WinAnsi supported characters for standard Helvetica font
+      const safeText = rawText.replace(/[^\x20-\x7E\xA0-\xFF]/g, ' ').replace(/\s+/g, ' ').trim();
+      if (!safeText) continue;
+
+      const pdfX = Math.max(0, l.bbox.x0 * scaleX);
+      const pdfY = Math.max(0, pageH - (l.bbox.y1 * scaleY));
+      const boxHeight = (l.bbox.y1 - l.bbox.y0) * scaleY;
+      const fontSize = Math.max(6, Math.min(64, Math.round(boxHeight * 0.85)));
+
+      try {
+        pdfLibPage.drawText(safeText, {
+          x: pdfX,
+          y: pdfY,
+          size: fontSize,
+          font: helveticaFont,
+          opacity: 0, // Fully invisible to preserve visuals, fully selectable in PDF viewers
+        });
+      } catch {
+        // Continue if single character fails
+      }
+    }
+  }
+
+  options?.onProgress?.(numPages, numPages, 'Finalizing searchable PDF document...');
+  const resultPdfBytes = await pdfLibDoc.save();
+
+  return {
+    pdfBytes: resultPdfBytes,
+    recognizedText: allRecognizedTexts.join('\n\n'),
+  };
+}
