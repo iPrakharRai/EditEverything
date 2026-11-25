@@ -1212,3 +1212,40 @@ export async function invertImageFile(
     img.src = url;
   });
 }
+
+// ---------------------------------------------------------------------------
+// Real Client-Side AES-256 PDF Password Encryption & Decryption (Web Crypto)
+// ---------------------------------------------------------------------------
+import { encryptPDF } from '@pdfsmaller/pdf-encrypt';
+import { decryptPDF, isEncrypted } from '@pdfsmaller/pdf-decrypt';
+
+export async function protectPdfWithPassword(
+  pdfBytes: Uint8Array,
+  password: string,
+  options?: {
+    ownerPassword?: string;
+    allowPrinting?: boolean;
+    allowCopying?: boolean;
+    allowModifying?: boolean;
+    algorithm?: 'AES-256' | 'RC4';
+  }
+): Promise<Uint8Array> {
+  return await encryptPDF(pdfBytes, password, options);
+}
+
+export async function unlockProtectedPdf(
+  pdfBytes: Uint8Array,
+  password: string
+): Promise<Uint8Array> {
+  return await decryptPDF(pdfBytes, password);
+}
+
+export async function checkPdfIsEncrypted(pdfBytes: Uint8Array): Promise<{
+  encrypted: boolean;
+  algorithm?: 'AES-256' | 'RC4';
+  version?: number;
+  revision?: number;
+  keyLength?: number;
+}> {
+  return await isEncrypted(pdfBytes);
+}
