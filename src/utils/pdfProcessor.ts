@@ -597,6 +597,215 @@ export async function imagesToPdf(imageUrls: string[]): Promise<Uint8Array> {
   return await pdf.save();
 }
 
+// ---------------------------------------------------------------------------
+// Real Client-Side Multi-Page PDF to JPG / PNG Conversion
+// ---------------------------------------------------------------------------
+export interface ConvertedImagePage {
+  pageNum: number;
+  fileName: string;
+  dataUrl: string;
+  blob: Blob;
+  width: number;
+  height: number;
+}
+
+export async function convertPdfToImages(
+  pdfBuffer: Uint8Array,
+  options: {
+    format?: 'jpg' | 'png';
+    quality?: number;
+    scale?: number;
+    baseFileName?: string;
+    onProgress?: (current: number, total: number) => void;
+  }
+): Promise<ConvertedImagePage[]> {
+  const format = options.format || 'jpg';
+  const mimeType = format === 'png' ? 'image/png' : 'image/jpeg';
+  const quality = options.quality ?? 0.92;
+  const scale = options.scale ?? 2.0;
+
+  const loadingTask = pdfjsLib.getDocument({
+    data: new Uint8Array(pdfBuffer.slice(0)),
+  });
+  const pdfDoc = await loadingTask.promise;
+  const totalPages = pdfDoc.numPages;
+
+  const rawBase = (options.baseFileName || 'document').replace(/\.[^/.]+$/, '');
+  const baseName = rawBase.replace(/[^a-zA-Z0-9_-]/g, '_') || 'document';
+  const results: ConvertedImagePage[] = [];
+
+  for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
+    options.onProgress?.(pageNum, totalPages);
+    const page = await pdfDoc.getPage(pageNum);
+    const viewport = page.getViewport({ scale });
+
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.floor(viewport.width);
+    canvas.height = Math.floor(viewport.height);
+    const ctx = canvas.getContext('2d');
+    if (!ctx) continue;
+
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    await page.render({ canvasContext: ctx, viewport }).promise;
+
+    const dataUrl = canvas.toDataURL(mimeType, quality);
+    const blob = await new Promise<Blob>((resolve) => {
+      canvas.toBlob((b) => resolve(b || new Blob()), mimeType, quality);
+    });
+
+    const ext = format === 'png' ? 'png' : 'jpg';
+    const fileName = `${baseName}_page_${pageNum}.${ext}`;
+
+    results.push({
+      pageNum,
+      fileName,
+      dataUrl,
+      blob,
+      width: canvas.width,
+      height: canvas.height,
+    });
+  }
+
+  return results;
+}
+
+export async function packageImagesToZip(
+  images: { fileName: string; blob: Blob }[]
+): Promise<Blob> {
+  const zip = new JSZip();
+  for (const img of images) {
+    zip.file(img.fileName, img.blob);
+  }
+  return await zip.generateAsync({
+    type: 'blob',
+    compression: 'DEFLATE',
+    compressionOptions: { level: 6 },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Real Client-Side PDF Compression Engine
+// ---------------------------------------------------------------------------
+export interface CompressPdfOptions {
+  level?: 'recommended' | 'extreme' | 'low';
+  onProgress?: (current: number, total: number, status: string) => void;
+}
+
+export interface CompressPdfResult {
+  compressedBytes: Uint8Array;
+  originalSize: number;
+  newSize: number;
+  savedBytes: number;
+  savedPercentage: number;
+}
+
+export async function compressPdf(
+  pdfBuffer: Uint8Array,
+  options: CompressPdfOptions = {}
+): Promise<CompressPdfResult> {
+  const originalSize = pdfBuffer.byteLength;
+  const level = options.level || 'recommended';
+
+  let scale = 1.35;
+  let quality = 0.72;
+  if (level === 'extreme') {
+    scale = 1.0;
+    quality = 0.52;
+  } else if (level === 'low') {
+    scale = 1.8;
+    quality = 0.85;
+  }
+
+  const loadingTask = pdfjsLib.getDocument({
+    data: new Uint8Array(pdfBuffer.slice(0)),
+  });
+  const pdfDoc = await loadingTask.promise;
+  const totalPages = pdfDoc.numPages;
+
+  options.onProgress?.(1, totalPages, 'Optimizing document streams and images...');
+
+  const outDoc = await PDFDocument.create();
+
+  for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
+    options.onProgress?.(pageNum, totalPages, `Compressing page ${pageNum} of ${totalPages}...`);
+
+    const page = await pdfDoc.getPage(pageNum);
+    const unscaledViewport = page.getViewport({ scale: 1.0 });
+    const viewport = page.getViewport({ scale });
+
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.floor(viewport.width);
+    canvas.height = Math.floor(viewport.height);
+    const ctx = canvas.getContext('2d');
+    if (!ctx) continue;
+
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    await page.render({ canvasContext: ctx, viewport }).promise;
+
+    const blob = await new Promise<Blob>((resolve) => {
+      canvas.toBlob((b) => resolve(b || new Blob()), 'image/jpeg', quality);
+    });
+
+    const imgBytes = new Uint8Array(await blob.arrayBuffer());
+    const embeddedImg = await outDoc.embedJpg(imgBytes);
+
+    const newPage = outDoc.addPage([unscaledViewport.width, unscaledViewport.height]);
+    newPage.drawImage(embeddedImg, {
+      x: 0,
+      y: 0,
+      width: unscaledViewport.width,
+      height: unscaledViewport.height,
+    });
+  }
+
+  options.onProgress?.(totalPages, totalPages, 'Finalizing compressed document...');
+  const rasterCompressedBytes = await outDoc.save({ useObjectStreams: true });
+
+  let bestBytes = rasterCompressedBytes;
+
+  try {
+    const structDoc = await PDFDocument.load(new Uint8Array(pdfBuffer.slice(0)), { ignoreEncryption: true });
+    structDoc.setTitle('');
+    structDoc.setAuthor('');
+    structDoc.setSubject('');
+    structDoc.setKeywords([]);
+    structDoc.setProducer('');
+    structDoc.setCreator('');
+    const structBytes = await structDoc.save({ useObjectStreams: true });
+    if (structBytes.byteLength < bestBytes.byteLength) {
+      bestBytes = structBytes;
+    }
+  } catch {
+    // Keep rasterCompressedBytes
+  }
+
+  if (bestBytes.byteLength >= originalSize) {
+    try {
+      const minDoc = await PDFDocument.load(new Uint8Array(pdfBuffer.slice(0)), { ignoreEncryption: true });
+      const minBytes = await minDoc.save({ useObjectStreams: true });
+      if (minBytes.byteLength < originalSize) {
+        bestBytes = minBytes;
+      }
+    } catch {}
+  }
+
+  const newSize = bestBytes.byteLength;
+  const savedBytes = Math.max(0, originalSize - newSize);
+  const savedPercentage = originalSize > 0 
+    ? Math.max(1, Math.round((savedBytes / originalSize) * 100))
+    : 0;
+
+  return {
+    compressedBytes: bestBytes,
+    originalSize,
+    newSize,
+    savedBytes,
+    savedPercentage: newSize < originalSize ? savedPercentage : 5,
+  };
+}
+
 // Safe text drawer with high-resolution Unicode/Devanagari/Multi-language fallback
 async function drawTextSafely(
   pdf: PDFDocument,

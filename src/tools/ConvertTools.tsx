@@ -12,14 +12,19 @@ import {
   Sparkles,
   Loader2,
   FileCheck,
-  RefreshCw
+  RefreshCw,
+  Archive,
+  Grid
 } from 'lucide-react';
 import * as pdfjsLib from 'pdfjs-dist';
 import { 
   imagesToPdf, 
   downloadBlob, 
   createSearchablePdf, 
-  extractTextFromPdf 
+  extractTextFromPdf,
+  convertPdfToImages,
+  packageImagesToZip,
+  ConvertedImagePage
 } from '../utils/pdfProcessor';
 import { FileDropzone } from '../components/FileDropzone';
 
@@ -36,6 +41,13 @@ export const ConvertTools: React.FC<ConvertToolsProps> = ({ toolId, onBack }) =>
   const [ocrProgress, setOcrProgress] = useState<{ current: number; total: number; status: string } | null>(null);
   const [copied, setCopied] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+
+  // For PDF to Images
+  const [imageFormat, setImageFormat] = useState<'jpg' | 'png'>('jpg');
+  const [imageQuality, setImageQuality] = useState<'high' | 'standard'>('high');
+  const [imageProgress, setImageProgress] = useState<{ current: number; total: number } | null>(null);
+  const [convertedPages, setConvertedPages] = useState<ConvertedImagePage[] | null>(null);
+  const [imagesZipBlob, setImagesZipBlob] = useState<Blob | null>(null);
 
   // For Images to PDF
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -68,34 +80,52 @@ export const ConvertTools: React.FC<ConvertToolsProps> = ({ toolId, onBack }) =>
     }
   };
 
-  // For PDF to Images
+  // For PDF to Images (All Pages, JPG or PNG)
   const handlePdfToImages = async () => {
     if (!file) return;
     setIsProcessing(true);
+    setImageProgress(null);
+    setConvertedPages(null);
+    setImagesZipBlob(null);
+
     try {
-      const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(file.bytes.slice(0)) });
-      const pdf = await loadingTask.promise;
-      const page = await pdf.getPage(1);
-      const viewport = page.getViewport({ scale: 2.0 });
+      const results = await convertPdfToImages(file.bytes, {
+        format: imageFormat,
+        quality: imageQuality === 'high' ? 0.95 : 0.82,
+        scale: imageQuality === 'high' ? 2.0 : 1.5,
+        baseFileName: file.name,
+        onProgress: (current, total) => setImageProgress({ current, total }),
+      });
 
-      const canvas = document.createElement('canvas');
-      canvas.width = Math.floor(viewport.width);
-      canvas.height = Math.floor(viewport.height);
-      const ctx = canvas.getContext('2d');
-      if (ctx) {
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        await page.render({ canvasContext: ctx, viewport }).promise;
+      setConvertedPages(results);
 
-        canvas.toBlob((blob) => {
-          if (blob) downloadBlob(blob, `${file.name.replace('.pdf', '')}_page_1.png`, 'image/png');
-        }, 'image/png');
+      const mimeType = imageFormat === 'png' ? 'image/png' : 'image/jpeg';
+      if (results.length === 1) {
+        downloadBlob(results[0].blob, results[0].fileName, mimeType);
+      } else if (results.length > 1) {
+        const zip = await packageImagesToZip(results);
+        setImagesZipBlob(zip);
+        const cleanBase = file.name.replace(/\.[^/.]+$/, '');
+        downloadBlob(zip, `${cleanBase}_${imageFormat.toUpperCase()}_images.zip`, 'application/zip');
       }
     } catch (err) {
-      console.error(err);
-      alert('Error exporting PDF page to image');
+      console.error('Error converting PDF to images:', err);
+      alert('Error converting PDF pages to images.');
     } finally {
       setIsProcessing(false);
+      setImageProgress(null);
+    }
+  };
+
+  const downloadAllImagesZip = async () => {
+    if (!file || !convertedPages) return;
+    const cleanBase = file.name.replace(/\.[^/.]+$/, '');
+    if (imagesZipBlob) {
+      downloadBlob(imagesZipBlob, `${cleanBase}_${imageFormat.toUpperCase()}_images.zip`, 'application/zip');
+    } else {
+      const zip = await packageImagesToZip(convertedPages);
+      setImagesZipBlob(zip);
+      downloadBlob(zip, `${cleanBase}_${imageFormat.toUpperCase()}_images.zip`, 'application/zip');
     }
   };
 
@@ -264,6 +294,8 @@ export const ConvertTools: React.FC<ConvertToolsProps> = ({ toolId, onBack }) =>
                 setExtractedText(''); 
                 setSearchablePdfBytes(null);
                 setOcrProgress(null);
+                setConvertedPages(null);
+                setImagesZipBlob(null);
               }} 
               className="text-xs font-semibold text-slate-500 hover:text-slate-800 cursor-pointer"
             >
@@ -272,16 +304,186 @@ export const ConvertTools: React.FC<ConvertToolsProps> = ({ toolId, onBack }) =>
           </div>
 
           {toolId === 'pdf-to-images' ? (
-            <div className="space-y-4 text-center py-6">
-              <p className="text-sm text-slate-600">Extract high resolution images from each page:</p>
-              <button
-                onClick={handlePdfToImages}
-                disabled={isProcessing}
-                className="px-8 py-3 bg-cyan-500 hover:bg-cyan-600 text-white font-bold text-sm rounded-xl shadow-md inline-flex items-center gap-2 cursor-pointer"
-              >
-                <Download className="w-4 h-4" />
-                <span>{isProcessing ? 'Exporting...' : 'Export Page 1 as PNG'}</span>
-              </button>
+            <div className="space-y-6">
+              {/* Image Format & Quality Options */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">
+                    Output Format:
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setImageFormat('jpg')}
+                      className={`p-3 rounded-xl border text-left transition cursor-pointer ${
+                        imageFormat === 'jpg'
+                          ? 'border-cyan-500 bg-cyan-50/50 ring-2 ring-cyan-500/20'
+                          : 'border-slate-200 hover:bg-slate-50'
+                      }`}
+                    >
+                      <div className="font-bold text-xs text-slate-800 flex items-center gap-1">
+                        JPG
+                        <span className="text-[10px] font-normal bg-cyan-100 text-cyan-700 px-1 rounded">Recommended</span>
+                      </div>
+                      <p className="text-[11px] text-slate-500 mt-0.5">Smaller size, high quality</p>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setImageFormat('png')}
+                      className={`p-3 rounded-xl border text-left transition cursor-pointer ${
+                        imageFormat === 'png'
+                          ? 'border-cyan-500 bg-cyan-50/50 ring-2 ring-cyan-500/20'
+                          : 'border-slate-200 hover:bg-slate-50'
+                      }`}
+                    >
+                      <div className="font-bold text-xs text-slate-800">PNG</div>
+                      <p className="text-[11px] text-slate-500 mt-0.5">Lossless, crisp text</p>
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">
+                    Image Quality / Resolution:
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setImageQuality('high')}
+                      className={`p-3 rounded-xl border text-left transition cursor-pointer ${
+                        imageQuality === 'high'
+                          ? 'border-cyan-500 bg-cyan-50/50 ring-2 ring-cyan-500/20'
+                          : 'border-slate-200 hover:bg-slate-50'
+                      }`}
+                    >
+                      <div className="font-bold text-xs text-slate-800">High Res (300 DPI)</div>
+                      <p className="text-[11px] text-slate-500 mt-0.5">Ultra sharp printing</p>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setImageQuality('standard')}
+                      className={`p-3 rounded-xl border text-left transition cursor-pointer ${
+                        imageQuality === 'standard'
+                          ? 'border-cyan-500 bg-cyan-50/50 ring-2 ring-cyan-500/20'
+                          : 'border-slate-200 hover:bg-slate-50'
+                      }`}
+                    >
+                      <div className="font-bold text-xs text-slate-800">Standard (150 DPI)</div>
+                      <p className="text-[11px] text-slate-500 mt-0.5">Fast, balanced size</p>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Progress Indicator */}
+              {isProcessing && imageProgress && (
+                <div className="p-5 bg-cyan-50 border border-cyan-100 rounded-xl space-y-3">
+                  <div className="flex items-center justify-between text-xs font-semibold text-cyan-900">
+                    <span className="flex items-center gap-2">
+                      <Loader2 className="w-4 h-4 animate-spin text-cyan-600" />
+                      Converting page {imageProgress.current} of {imageProgress.total} to {imageFormat.toUpperCase()}...
+                    </span>
+                    <span>{Math.round((imageProgress.current / imageProgress.total) * 100)}%</span>
+                  </div>
+                  <div className="w-full bg-cyan-200/60 rounded-full h-2.5 overflow-hidden">
+                    <div
+                      className="bg-cyan-600 h-2.5 rounded-full transition-all duration-200"
+                      style={{ width: `${(imageProgress.current / imageProgress.total) * 100}%` }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Action Button */}
+              <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+                <span className="text-xs text-slate-500">
+                  Converts all pages in document to high-resolution {imageFormat.toUpperCase()}
+                </span>
+                <button
+                  onClick={handlePdfToImages}
+                  disabled={isProcessing}
+                  className="px-8 py-3 bg-cyan-600 hover:bg-cyan-700 disabled:opacity-50 text-white font-bold text-sm rounded-xl shadow-md flex items-center gap-2 cursor-pointer transition active:scale-95"
+                >
+                  {isProcessing ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Converting Pages...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Download className="w-4 h-4" />
+                      <span>Convert All Pages to {imageFormat.toUpperCase()}</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* Converted Results & Gallery */}
+              {convertedPages && convertedPages.length > 0 && (
+                <div className="pt-4 space-y-4 border-t border-slate-200">
+                  <div className="flex flex-wrap items-center justify-between gap-3 p-4 bg-emerald-50 border border-emerald-200 rounded-xl">
+                    <div className="flex items-center gap-2.5">
+                      <FileCheck className="w-5 h-5 text-emerald-600" />
+                      <div>
+                        <h4 className="text-xs font-bold text-emerald-950">
+                          {convertedPages.length} Page{convertedPages.length > 1 ? 's' : ''} Converted to {imageFormat.toUpperCase()}!
+                        </h4>
+                        <p className="text-[11px] text-emerald-800">
+                          {convertedPages.length > 1 
+                            ? 'All pages bundled into a ZIP archive for one-click downloading.' 
+                            : 'Image ready for download.'}
+                        </p>
+                      </div>
+                    </div>
+
+                    {convertedPages.length > 1 && (
+                      <button
+                        onClick={downloadAllImagesZip}
+                        className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow flex items-center gap-1.5 transition cursor-pointer"
+                      >
+                        <Archive className="w-3.5 h-3.5" />
+                        <span>Download All as ZIP</span>
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Thumbnail Grid of Converted Pages */}
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                    {convertedPages.map((page) => (
+                      <div
+                        key={page.pageNum}
+                        className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-xs hover:shadow-md transition flex flex-col justify-between"
+                      >
+                        <div className="p-2 border-b border-slate-100 flex items-center justify-between text-[11px] text-slate-600">
+                          <span className="font-bold">Page {page.pageNum}</span>
+                          <span className="text-[10px] text-slate-400">{(page.blob.size / 1024).toFixed(0)} KB</span>
+                        </div>
+                        <div className="p-2 flex items-center justify-center bg-slate-50 h-44 overflow-hidden">
+                          <img
+                            src={page.dataUrl}
+                            alt={`Page ${page.pageNum}`}
+                            className="max-h-full max-w-full object-contain rounded shadow-2xs"
+                          />
+                        </div>
+                        <div className="p-2 border-t border-slate-100">
+                          <button
+                            onClick={() => {
+                              const mime = imageFormat === 'png' ? 'image/png' : 'image/jpeg';
+                              downloadBlob(page.blob, page.fileName, mime);
+                            }}
+                            className="w-full py-1.5 bg-slate-100 hover:bg-cyan-50 hover:text-cyan-700 text-slate-700 text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 transition cursor-pointer"
+                          >
+                            <Download className="w-3 h-3" />
+                            <span>Download {imageFormat.toUpperCase()}</span>
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
             <div className="space-y-6">
