@@ -568,6 +568,232 @@ export async function editMetadata(
   return await pdf.save();
 }
 
+// ---------------------------------------------------------------------------
+// Real Client-Side Crop PDF
+// ---------------------------------------------------------------------------
+export async function cropPdf(
+  pdfBuffer: Uint8Array,
+  marginPoints: number = 20
+): Promise<Uint8Array> {
+  const doc = await PDFDocument.load(new Uint8Array(pdfBuffer.slice(0)), { ignoreEncryption: true });
+  const totalPages = doc.getPageCount();
+
+  for (let i = 0; i < totalPages; i++) {
+    const page = doc.getPage(i);
+    const { width, height } = page.getSize();
+    const m = Math.min(marginPoints, Math.min(width, height) / 4);
+    page.setCropBox(m, m, width - 2 * m, height - 2 * m);
+  }
+
+  return await doc.save();
+}
+
+// ---------------------------------------------------------------------------
+// Real Client-Side PDF Form & Layer Flattening
+// ---------------------------------------------------------------------------
+export interface FlattenPdfOptions {
+  mode: 'forms' | 'full';
+  onProgress?: (current: number, total: number, status: string) => void;
+}
+
+export async function inspectPdfForm(
+  pdfBuffer: Uint8Array
+): Promise<{ fieldCount: number; fieldNames: string[] }> {
+  try {
+    const doc = await PDFDocument.load(new Uint8Array(pdfBuffer.slice(0)), { ignoreEncryption: true });
+    const form = doc.getForm();
+    const fields = form.getFields();
+    return {
+      fieldCount: fields.length,
+      fieldNames: fields.map(f => f.getName()).slice(0, 8),
+    };
+  } catch {
+    return { fieldCount: 0, fieldNames: [] };
+  }
+}
+
+export async function flattenPdf(
+  pdfBuffer: Uint8Array,
+  options: FlattenPdfOptions = { mode: 'forms' }
+): Promise<{ pdfBytes: Uint8Array; fieldCount: number }> {
+  const doc = await PDFDocument.load(new Uint8Array(pdfBuffer.slice(0)), { ignoreEncryption: true });
+  let fieldCount = 0;
+  try {
+    const form = doc.getForm();
+    const fields = form.getFields();
+    fieldCount = fields.length;
+    if (fieldCount > 0) {
+      form.flatten();
+    }
+  } catch {}
+
+  if (options.mode === 'forms') {
+    const pdfBytes = await doc.save({ useObjectStreams: true });
+    return { pdfBytes, fieldCount };
+  }
+
+  const totalPages = doc.getPageCount();
+  const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(pdfBuffer.slice(0)) });
+  const pdfJsDoc = await loadingTask.promise;
+  const outDoc = await PDFDocument.create();
+
+  for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
+    options.onProgress?.(pageNum, totalPages, `Flattening page ${pageNum} of ${totalPages}...`);
+    const page = await pdfJsDoc.getPage(pageNum);
+    const unscaledViewport = page.getViewport({ scale: 1.0 });
+    const viewport = page.getViewport({ scale: 2.0 });
+
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.floor(viewport.width);
+    canvas.height = Math.floor(viewport.height);
+    const ctx = canvas.getContext('2d');
+    if (!ctx) continue;
+
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    await page.render({ canvasContext: ctx, viewport }).promise;
+
+    const blob = await new Promise<Blob>((resolve) => {
+      canvas.toBlob((b) => resolve(b || new Blob()), 'image/jpeg', 0.95);
+    });
+    const imgBytes = new Uint8Array(await blob.arrayBuffer());
+    const embeddedImg = await outDoc.embedJpg(imgBytes);
+
+    const newPage = outDoc.addPage([unscaledViewport.width, unscaledViewport.height]);
+    newPage.drawImage(embeddedImg, {
+      x: 0,
+      y: 0,
+      width: unscaledViewport.width,
+      height: unscaledViewport.height,
+    });
+  }
+
+  const pdfBytes = await outDoc.save();
+  return { pdfBytes, fieldCount };
+}
+
+// ---------------------------------------------------------------------------
+// Real Client-Side Interactive Whiteout & Redaction
+// ---------------------------------------------------------------------------
+export interface RedactionBox {
+  id: string;
+  pageNum: number;
+  x: number; // canvas pixel coordinates
+  y: number;
+  width: number;
+  height: number;
+  canvasWidth: number;
+  canvasHeight: number;
+  style: 'whiteout' | 'blackout' | 'redacted-label';
+}
+
+export async function applyRedactionsToPdf(
+  pdfBuffer: Uint8Array,
+  redactions: RedactionBox[]
+): Promise<Uint8Array> {
+  const doc = await PDFDocument.load(new Uint8Array(pdfBuffer.slice(0)), { ignoreEncryption: true });
+  const totalPages = doc.getPageCount();
+  const font = await doc.embedFont(StandardFonts.HelveticaBold);
+
+  for (const box of redactions) {
+    if (box.pageNum < 1 || box.pageNum > totalPages) continue;
+    const page = doc.getPage(box.pageNum - 1);
+    const { width: pageW, height: pageH } = page.getSize();
+
+    const scaleX = pageW / (box.canvasWidth || 1);
+    const scaleY = pageH / (box.canvasHeight || 1);
+
+    const pdfX = Math.max(0, box.x * scaleX);
+    const pdfY = Math.max(0, pageH - ((box.y + box.height) * scaleY));
+    const pdfW = Math.min(pageW - pdfX, box.width * scaleX);
+    const pdfH = Math.min(pageH - pdfY, box.height * scaleY);
+
+    if (box.style === 'whiteout') {
+      page.drawRectangle({
+        x: pdfX,
+        y: pdfY,
+        width: pdfW,
+        height: pdfH,
+        color: rgb(1, 1, 1),
+      });
+    } else {
+      page.drawRectangle({
+        x: pdfX,
+        y: pdfY,
+        width: pdfW,
+        height: pdfH,
+        color: rgb(0, 0, 0),
+      });
+
+      if (box.style === 'redacted-label' && pdfH >= 10 && pdfW >= 36) {
+        const text = '[REDACTED]';
+        const fontSize = Math.max(6, Math.min(14, Math.floor(pdfH * 0.55)));
+        const textWidth = font.widthOfTextAtSize(text, fontSize);
+        if (textWidth < pdfW) {
+          const textX = pdfX + (pdfW - textWidth) / 2;
+          const textY = pdfY + (pdfH - fontSize) / 2;
+          page.drawText(text, {
+            x: textX,
+            y: textY,
+            size: fontSize,
+            font,
+            color: rgb(1, 1, 1),
+          });
+        }
+      }
+    }
+  }
+
+  return await doc.save();
+}
+
+export async function findTextOccurrencesOnPage(
+  pdfBuffer: Uint8Array,
+  pageNum: number,
+  query: string,
+  canvasWidth: number,
+  canvasHeight: number
+): Promise<{ x: number; y: number; width: number; height: number }[]> {
+  if (!query || !query.trim()) return [];
+  const normalizedQuery = query.trim().toLowerCase();
+
+  const loadingTask = pdfjsLib.getDocument({
+    data: new Uint8Array(pdfBuffer.slice(0)),
+  });
+  const pdfDoc = await loadingTask.promise;
+  if (pageNum < 1 || pageNum > pdfDoc.numPages) return [];
+
+  const page = await pdfDoc.getPage(pageNum);
+  const viewport = page.getViewport({ scale: 1.0 });
+  const textContent = await page.getTextContent();
+
+  const matches: { x: number; y: number; width: number; height: number }[] = [];
+
+  for (const item of textContent.items as any[]) {
+    const str = (item.str || '').toLowerCase();
+    if (!str.includes(normalizedQuery)) continue;
+
+    const tx = item.transform[4];
+    const ty = item.transform[5];
+    const itemW = item.width || 40;
+    const itemH = item.height || 14;
+
+    const canvasX = (tx / viewport.width) * canvasWidth;
+    const canvasY = ((viewport.height - ty - itemH) / viewport.height) * canvasHeight;
+    const canvasW = (itemW / viewport.width) * canvasWidth;
+    const canvasH = (itemH / viewport.height) * canvasHeight;
+
+    matches.push({
+      x: Math.max(0, canvasX - 2),
+      y: Math.max(0, canvasY - 2),
+      width: canvasW + 4,
+      height: canvasH + 4,
+    });
+  }
+
+  return matches;
+}
+
 export async function imagesToPdf(imageUrls: string[]): Promise<Uint8Array> {
   const pdf = await PDFDocument.create();
 
