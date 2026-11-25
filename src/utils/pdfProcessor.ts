@@ -3,6 +3,7 @@ if (typeof window !== 'undefined' && !pdfjsLib.GlobalWorkerOptions.workerSrc) {
   pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
 }
 import { PDFDocument, rgb, degrees, StandardFonts } from 'pdf-lib';
+import JSZip from 'jszip';
 import { PlacedElement, EditedExistingText } from '../types';
 
 export function hexToRgb(hexOrRgb: string) {
@@ -37,13 +38,231 @@ export async function mergePdfs(pdfBuffers: Uint8Array[]): Promise<Uint8Array> {
   return await mergedPdf.save();
 }
 
+export async function getPdfPageCount(pdfBuffer: Uint8Array): Promise<number> {
+  const srcPdf = await PDFDocument.load(new Uint8Array(pdfBuffer.slice(0)), { ignoreEncryption: true });
+  return srcPdf.getPageCount();
+}
+
+export async function renderPdfThumbnail(
+  pdfBuffer: Uint8Array,
+  pageNum: number,
+  scale = 0.35
+): Promise<string> {
+  const loadingTask = pdfjsLib.getDocument({
+    data: new Uint8Array(pdfBuffer.slice(0)),
+  });
+  const pdfDoc = await loadingTask.promise;
+  const page = await pdfDoc.getPage(pageNum);
+  const viewport = page.getViewport({ scale });
+
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.floor(viewport.width);
+  canvas.height = Math.floor(viewport.height);
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return '';
+
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  await page.render({ canvasContext: ctx, viewport }).promise;
+
+  return canvas.toDataURL('image/jpeg', 0.8);
+}
+
+export interface SplitResultFile {
+  name: string;
+  bytes: Uint8Array;
+  pageCount: number;
+  label: string;
+}
+
+export interface SplitPdfOptions {
+  mode: 'ranges' | 'all' | 'every' | 'extract';
+  ranges?: { start: number; end: number }[];
+  mergeRanges?: boolean;
+  everyN?: number;
+  extractPages?: number[];
+  mergeExtracted?: boolean;
+  baseFileName?: string;
+}
+
+export async function splitPdfAdvanced(
+  pdfBuffer: Uint8Array,
+  options: SplitPdfOptions
+): Promise<SplitResultFile[]> {
+  const srcPdf = await PDFDocument.load(new Uint8Array(pdfBuffer.slice(0)), { ignoreEncryption: true });
+  const totalPages = srcPdf.getPageCount();
+  const rawBase = (options.baseFileName || 'document').replace(/\.[^/.]+$/, '');
+  const baseName = rawBase.replace(/[^a-zA-Z0-9_-]/g, '_') || 'document';
+  const results: SplitResultFile[] = [];
+
+  if (options.mode === 'all') {
+    for (let i = 0; i < totalPages; i++) {
+      const singlePdf = await PDFDocument.create();
+      const [page] = await singlePdf.copyPages(srcPdf, [i]);
+      singlePdf.addPage(page);
+      const bytes = await singlePdf.save();
+      results.push({
+        name: `${baseName}_page_${i + 1}.pdf`,
+        bytes,
+        pageCount: 1,
+        label: `Page ${i + 1}`,
+      });
+    }
+    return results;
+  }
+
+  if (options.mode === 'every') {
+    const step = Math.max(1, Math.min(totalPages, options.everyN || 1));
+    let partIndex = 1;
+    for (let i = 0; i < totalPages; i += step) {
+      const startPage = i + 1;
+      const endPage = Math.min(i + step, totalPages);
+      const pageIndices: number[] = [];
+      for (let p = startPage; p <= endPage; p++) {
+        pageIndices.push(p - 1);
+      }
+      const partPdf = await PDFDocument.create();
+      const copied = await partPdf.copyPages(srcPdf, pageIndices);
+      copied.forEach(p => partPdf.addPage(p));
+      const bytes = await partPdf.save();
+      results.push({
+        name: `${baseName}_part_${partIndex}_pages_${startPage}-${endPage}.pdf`,
+        bytes,
+        pageCount: pageIndices.length,
+        label: `Part ${partIndex}: Pages ${startPage}–${endPage}`,
+      });
+      partIndex++;
+    }
+    return results;
+  }
+
+  if (options.mode === 'extract') {
+    const rawPages = options.extractPages || [];
+    const validPages = Array.from(new Set(rawPages))
+      .filter(p => p >= 1 && p <= totalPages)
+      .sort((a, b) => a - b);
+
+    if (validPages.length === 0) {
+      throw new Error('Please select at least one page to extract.');
+    }
+
+    if (options.mergeExtracted) {
+      const mergedPdf = await PDFDocument.create();
+      const indices = validPages.map(p => p - 1);
+      const copied = await mergedPdf.copyPages(srcPdf, indices);
+      copied.forEach(p => mergedPdf.addPage(p));
+      const bytes = await mergedPdf.save();
+      results.push({
+        name: `${baseName}_extracted_${validPages.length}_pages.pdf`,
+        bytes,
+        pageCount: validPages.length,
+        label: `Extracted ${validPages.length} Pages (${validPages.join(', ')})`,
+      });
+    } else {
+      for (const p of validPages) {
+        const singlePdf = await PDFDocument.create();
+        const [page] = await singlePdf.copyPages(srcPdf, [p - 1]);
+        singlePdf.addPage(page);
+        const bytes = await singlePdf.save();
+        results.push({
+          name: `${baseName}_page_${p}.pdf`,
+          bytes,
+          pageCount: 1,
+          label: `Page ${p}`,
+        });
+      }
+    }
+    return results;
+  }
+
+  // mode === 'ranges'
+  const rangesList = options.ranges && options.ranges.length > 0
+    ? options.ranges
+    : [{ start: 1, end: totalPages }];
+
+  const cleanRanges = rangesList.map(r => {
+    let s = Math.max(1, r.start);
+    let e = Math.min(totalPages, r.end);
+    if (s > e) {
+      const tmp = s;
+      s = e;
+      e = tmp;
+    }
+    return { start: s, end: e };
+  });
+
+  if (options.mergeRanges) {
+    const mergedPdf = await PDFDocument.create();
+    let totalAdded = 0;
+    for (const r of cleanRanges) {
+      const indices: number[] = [];
+      for (let p = r.start; p <= r.end; p++) {
+        indices.push(p - 1);
+      }
+      const copied = await mergedPdf.copyPages(srcPdf, indices);
+      copied.forEach(page => mergedPdf.addPage(page));
+      totalAdded += indices.length;
+    }
+    const bytes = await mergedPdf.save();
+    results.push({
+      name: `${baseName}_merged_ranges.pdf`,
+      bytes,
+      pageCount: totalAdded,
+      label: `Merged Ranges (${cleanRanges.map(r => `${r.start}-${r.end}`).join(', ')})`,
+    });
+  } else {
+    let partNum = 1;
+    for (const r of cleanRanges) {
+      const partPdf = await PDFDocument.create();
+      const indices: number[] = [];
+      for (let p = r.start; p <= r.end; p++) {
+        indices.push(p - 1);
+      }
+      const copied = await partPdf.copyPages(srcPdf, indices);
+      copied.forEach(page => partPdf.addPage(page));
+      const bytes = await partPdf.save();
+      results.push({
+        name: `${baseName}_part_${partNum}_pages_${r.start}-${r.end}.pdf`,
+        bytes,
+        pageCount: indices.length,
+        label: `Range ${partNum}: Pages ${r.start}–${r.end}`,
+      });
+      partNum++;
+    }
+  }
+
+  return results;
+}
+
+export async function packagePdfsToZip(files: { name: string; bytes: Uint8Array }[]): Promise<Blob> {
+  const zip = new JSZip();
+  for (const f of files) {
+    zip.file(f.name, f.bytes);
+  }
+  return await zip.generateAsync({
+    type: 'blob',
+    compression: 'DEFLATE',
+    compressionOptions: { level: 6 },
+  });
+}
+
 export async function splitPdf(pdfBuffer: Uint8Array, pageRanges: string): Promise<Uint8Array[]> {
-  const srcPdf = await PDFDocument.load(pdfBuffer);
+  const srcPdf = await PDFDocument.load(new Uint8Array(pdfBuffer.slice(0)), { ignoreEncryption: true });
   const totalPages = srcPdf.getPageCount();
   const results: Uint8Array[] = [];
 
-  // Parse ranges e.g. "1-2, 3-4" or "all"
-  const rangeGroups = pageRanges.split(',').map(r => r.trim()).filter(Boolean);
+  const cleanStr = (pageRanges || '').trim().toLowerCase();
+  if (cleanStr === 'all' || cleanStr === '') {
+    for (let i = 0; i < totalPages; i++) {
+      const singlePdf = await PDFDocument.create();
+      const [page] = await singlePdf.copyPages(srcPdf, [i]);
+      singlePdf.addPage(page);
+      results.push(await singlePdf.save());
+    }
+    return results;
+  }
+
+  const rangeGroups = cleanStr.split(',').map(r => r.trim()).filter(Boolean);
 
   for (const group of rangeGroups) {
     const newPdf = await PDFDocument.create();
@@ -51,8 +270,17 @@ export async function splitPdf(pdfBuffer: Uint8Array, pageRanges: string): Promi
 
     if (group.includes('-')) {
       const [startStr, endStr] = group.split('-');
-      const start = Math.max(1, parseInt(startStr, 10));
-      const end = Math.min(totalPages, parseInt(endStr, 10));
+      let start = parseInt(startStr, 10);
+      let end = parseInt(endStr, 10);
+      if (isNaN(start)) start = 1;
+      if (isNaN(end)) end = totalPages;
+      if (start > end) {
+        const tmp = start;
+        start = end;
+        end = tmp;
+      }
+      start = Math.max(1, start);
+      end = Math.min(totalPages, end);
       for (let i = start; i <= end; i++) pageIndices.push(i - 1);
     } else {
       const p = parseInt(group, 10);
